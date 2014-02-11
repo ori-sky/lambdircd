@@ -25,7 +25,7 @@ acceptLoop usersT sock = do
     (handle, _, _) <- accept sock
     atomically $ do
         users <- readTVar usersT
-        writeTVar usersT $ (User (Just handle) Nothing Nothing Nothing) : users
+        writeTVar usersT $ User (Just handle) Nothing Nothing Nothing : users
     acceptLoop usersT sock
 
 mainLoop :: TVar [User] -> IO ()
