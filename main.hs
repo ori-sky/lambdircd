@@ -7,10 +7,10 @@ import Control.Monad
 
 data User = User
     { handle :: Maybe Handle
+    , id     :: Maybe String
     , nick   :: Maybe String
     , user   :: Maybe String
     , real   :: Maybe String
-    , uid    :: Maybe String
     }
 
 main :: IO ()
