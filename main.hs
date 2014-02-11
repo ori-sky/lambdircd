@@ -1,7 +1,7 @@
 import System.Environment (getArgs)
 import System.IO (hSetBuffering, hGetLine, hPutStrLn, BufferMode(..), Handle)
 import Network (listenOn, withSocketsDo, accept, PortID(..), Socket)
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.STM
 import Control.Monad
 
@@ -12,28 +12,25 @@ data User = User
     , real   :: Maybe String
     }
 
-usersT :: STM (TVar [User])
-usersT = newTVar []
-
-type Msg = String
-
-main :: IO()
+main :: IO ()
 main = withSocketsDo $ do
     args <- getArgs
+    usersT <- atomically $ do newTVar []
     sock <- listenOn $ PortNumber 6667
-    forkIO mainLoop
-    acceptLoop sock
+    forkIO $ acceptLoop usersT sock
+    mainLoop usersT
 
-mainLoop :: IO ()
-mainLoop = atomically $ do
-    users <- readTVar usersT
-    putStrLn $ show $ length users
-    mainLoop
-
-acceptLoop :: Socket -> IO ()
-acceptLoop sock = do
+acceptLoop :: TVar [User] -> Socket -> IO ()
+acceptLoop usersT sock = do
     (handle, _, _) <- accept sock
-    forkIO $ atomically $ do
+    atomically $ do
         users <- readTVar usersT
-        writeTVar usersT $ (User handle Nothing Nothing Nothing) : users
-    acceptLoop sock
+        writeTVar usersT $ (User (Just handle) Nothing Nothing Nothing) : users
+    acceptLoop usersT sock
+
+mainLoop :: TVar [User] -> IO ()
+mainLoop usersT = do
+    users <- atomically $ do readTVar usersT
+    putStrLn $ show $ length users
+    threadDelay 100000
+    mainLoop usersT
