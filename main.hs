@@ -10,6 +10,7 @@ data User = User
     , nick   :: Maybe String
     , user   :: Maybe String
     , real   :: Maybe String
+    , uid    :: Maybe String
     }
 
 main :: IO ()
