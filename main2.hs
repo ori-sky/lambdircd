@@ -1,11 +1,10 @@
 import System.Environment (getArgs)
---import System.IO (hSetBuffering, hGetLine, hPutStrLn, hClose, hIsEOF, hIsOpen, BufferMode(..), Handle)
 import System.IO
-import Network (withSocketsDo, listenOn, Socket, PortID(..))
+import Network
 import Network.Socket
+import Network.SocketServer
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.STM
---import Control.Monad (liftM, filterM)
 import Control.Monad
 
 data Shared = Shared
@@ -24,6 +23,15 @@ data User = User
     , real   :: Maybe String
     }
 
+main :: IO ()
+main = do
+    serveTCPforever (simpleTCPOptions 6667) {reuse = True}
+        $ threadedHandler $ handleHandler
+        (\h _ _ -> do
+            putStrLn "hello"
+            hPutStrLn h "hello"
+        )
+{-
 main :: IO ()
 main = withSocketsDo $ do
     args <- getArgs
@@ -48,3 +56,4 @@ mainLoop sharedT env = do
     --putStrLn $ show hs
     threadDelay 1000000
     mainLoop sharedT env
+-}
