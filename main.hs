@@ -1,9 +1,15 @@
 import System.Environment (getArgs)
-import System.IO (hSetBuffering, hGetLine, hPutStrLn, BufferMode(..), Handle)
-import Network (listenOn, withSocketsDo, accept, PortID(..), Socket)
+--import System.IO (hSetBuffering, hGetLine, hPutStrLn, hClose, hIsEOF, hIsOpen, BufferMode(..), Handle)
+import System.IO
+import Network (withSocketsDo, listenOn, accept, Socket, PortID(..))
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.STM
+--import Control.Monad (liftM, filterM)
 import Control.Monad
+
+data Shared = Shared
+    { handles :: [Handle]
+    }
 
 data User = User
     { handle :: Maybe Handle
@@ -16,22 +22,24 @@ data User = User
 main :: IO ()
 main = withSocketsDo $ do
     args <- getArgs
-    usersT <- atomically $ do newTVar []
+    sharedT <- atomically $ do newTVar $ Shared []
     sock <- listenOn $ PortNumber 6667
-    forkIO $ acceptLoop usersT sock
-    mainLoop usersT
+    forkIO $ acceptLoop sharedT sock
+    mainLoop sharedT
 
-acceptLoop :: TVar [User] -> Socket -> IO ()
-acceptLoop usersT sock = do
+acceptLoop :: TVar Shared -> Socket -> IO ()
+acceptLoop sharedT sock = do
     (handle, _, _) <- accept sock
+    hSetBuffering handle NoBuffering
     atomically $ do
-        users <- readTVar usersT
-        writeTVar usersT $ User (Just handle) Nothing Nothing Nothing : users
-    acceptLoop usersT sock
+        shared <- readTVar sharedT
+        writeTVar sharedT $ Shared (handle : handles shared)
+    acceptLoop sharedT sock
 
-mainLoop :: TVar [User] -> IO ()
-mainLoop usersT = do
-    users <- atomically $ do readTVar usersT
-    putStrLn $ show $ length users
-    threadDelay 100000
-    mainLoop usersT
+mainLoop :: TVar Shared -> IO ()
+mainLoop sharedT = do
+    shared <- atomically $ do readTVar sharedT
+    hs <- filterM hIsWritable (handles shared)
+    putStrLn $ show hs
+    threadDelay 1000000
+    mainLoop sharedT
