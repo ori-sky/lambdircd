@@ -29,11 +29,16 @@ main = do
         $ threadedHandler $ handleHandler
         (\handle _ _ -> do
             hSetBuffering handle NoBuffering
-            hPutStrLn handle "What's your name?"
-            hPutStr handle "> "
-            hFlush handle
-            line <- hGetLine handle
-            let response = concat ["Hello ", line, "!"]
-            putStrLn response
-            hPutStrLn handle response
+            hSetNewlineMode handle universalNewlineMode
+            hSetEncoding handle utf8
+
+            putStrLn "connection"
+            hPutStr handle ":lambdircd 001 Dashie :Welcome to the lambdircd Internet Relay Network Dashie\r\n"
+            hPutStr handle ":Dashie JOIN #test\r\n"
+            hPutStr handle ":Pinkie JOIN #test\r\n"
+            hPutStr handle ":Shockky JOIN #test\r\n"
+            loop
         )
+
+loop :: IO ()
+loop = loop
