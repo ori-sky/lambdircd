@@ -23,6 +23,10 @@ import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.STM
 import Control.Monad
 
+($>) :: (a -> b) -> a -> b
+f $> x = f x
+infixl 0 $>
+
 data Prefix = StringPrefix String
             | MaskPrefix
                 { nick  :: String
@@ -53,7 +57,7 @@ sToMessage s = Message Nothing "command" []
 main :: IO ()
 main = do
     serveTCPforever (simpleTCPOptions 6667) {reuse = True}
-        $ threadedHandler $ handleHandler
+        . threadedHandler . handleHandler
         (\handle _ _ -> do
             hSetBuffering handle NoBuffering
             hSetNewlineMode handle universalNewlineMode
