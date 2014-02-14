@@ -1,5 +1,6 @@
 import System.Environment (getArgs)
 import System.IO
+import System.Timeout
 import Network
 import Network.Socket
 import Network.SocketServer
@@ -32,13 +33,21 @@ main = do
             hSetNewlineMode handle universalNewlineMode
             hSetEncoding handle utf8
 
-            putStrLn "connection"
+            putStrLn "connected"
+            timeout 15000000 $ clientHandler handle
+            putStrLn "disconnected"
+            return ()
+
+            {-putStrLn "connection"
             hPutStr handle ":lambdircd 001 Dashie :Welcome to the lambdircd Internet Relay Network Dashie\r\n"
             hPutStr handle ":Dashie JOIN #test\r\n"
             hPutStr handle ":Pinkie JOIN #test\r\n"
             hPutStr handle ":Shockky JOIN #test\r\n"
-            loop
+            loop-}
         )
 
-loop :: IO ()
-loop = loop
+clientHandler :: Handle -> IO ()
+clientHandler handle = do
+    line <- hGetLine handle
+    putStrLn line
+    clientHandler handle
