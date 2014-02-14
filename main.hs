@@ -24,6 +24,24 @@ data User = User
     }
 -}
 
+data Prefix = StringPrefix String
+            | MaskPrefix
+                { nick  :: String
+                , user  :: String
+                , host  :: String
+                }
+
+data Message = Message
+    { messagePrefix     :: (Maybe Prefix)
+    , messageCommand    :: String
+    , messageParams     :: [String]
+    }
+
+data Client = Client
+    { clientHandle      :: Handle
+    , clientNick        :: Maybe String
+    }
+
 main :: IO ()
 main = do
     serveTCPforever (simpleTCPOptions 6667) {reuse = True}
@@ -33,21 +51,22 @@ main = do
             hSetNewlineMode handle universalNewlineMode
             hSetEncoding handle utf8
 
+            let client = Client handle Nothing
+
             putStrLn "connected"
-            timeout 15000000 $ clientHandler handle
+            timeout 15000000 $ clientHandler client
             putStrLn "disconnected"
             return ()
-
-            {-putStrLn "connection"
-            hPutStr handle ":lambdircd 001 Dashie :Welcome to the lambdircd Internet Relay Network Dashie\r\n"
-            hPutStr handle ":Dashie JOIN #test\r\n"
-            hPutStr handle ":Pinkie JOIN #test\r\n"
-            hPutStr handle ":Shockky JOIN #test\r\n"
-            loop-}
         )
 
-clientHandler :: Handle -> IO ()
-clientHandler handle = do
-    line <- hGetLine handle
-    putStrLn line
-    clientHandler handle
+clientHandler :: Client -> IO ()
+clientHandler client = do
+    line <- hGetLine (clientHandle client)
+    let w:ws = words line
+    messageHandler client $ Message Nothing w ws
+    clientHandler client
+
+messageHandler :: Client -> Message -> IO ()
+messageHandler client (Message _ "NICK" (p:ps)) = putStrLn $ "nick = " ++ p
+messageHandler client (Message _ "USER" ps)     = putStrLn $ "user = " ++ (show ps)
+messageHandler client (Message _ op ps)         = putStrLn $ op ++ " and " ++ (show ps)
