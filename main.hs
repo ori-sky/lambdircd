@@ -23,22 +23,6 @@ import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.STM
 import Control.Monad
 
-{-
-data Shared = Shared
-    { sockets :: [Socket]
-    }
-
-data Client = Client (Maybe Socket)
-data Env = Env [Client]
-data User = User
-    { socket :: Maybe Socket
-    , id     :: Maybe String
-    , nick   :: Maybe String
-    , user   :: Maybe String
-    , real   :: Maybe String
-    }
--}
-
 data Prefix = StringPrefix String
             | MaskPrefix
                 { nick  :: String
@@ -51,7 +35,7 @@ instance Show Prefix where
     show (MaskPrefix n u h) = n ++ ('!':u) ++ ('@':h)
 
 data Message = Message
-    { messagePrefix     :: (Maybe Prefix)
+    { messagePrefix     :: Maybe Prefix
     , messageCommand    :: String
     , messageParams     :: [String]
     } deriving (Show)
