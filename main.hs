@@ -57,7 +57,7 @@ sToMessage s = Message Nothing "command" []
 main :: IO ()
 main = do
     serveTCPforever (simpleTCPOptions 6667) {reuse = True}
-        . threadedHandler . handleHandler
+        $ threadedHandler $ handleHandler
         (\handle _ _ -> do
             hSetBuffering handle NoBuffering
             hSetNewlineMode handle universalNewlineMode
@@ -66,18 +66,36 @@ main = do
             let client = Client handle Nothing
 
             putStrLn "connected"
-            timeout 15000000 $ clientHandler client
+            result <- timeout 15000000 $ clientHandler client
+            -- TODO: return if Nothing
+            clientLoop client
             putStrLn "disconnected"
             return ()
         )
 
-clientHandler :: Client -> IO ()
+clientLoop :: Client -> IO ()
+clientLoop = clientLoop' False
+clientLoop' :: Bool -> Client -> IO ()
+clientLoop' pinged client = do
+    result <- timeout 90000000 $ clientHandler client
+    case result of
+        Nothing     -> case pinged of
+            True        -> return ()
+            False       -> clientLoop' True client
+        Just False  -> return ()
+        _           -> clientLoop client
+
+clientHandler :: Client -> IO Bool
 clientHandler client = do
     line <- hGetLine (clientHandle client)
     messageHandler client $ sToMessage line
     clientHandler client
 
-messageHandler :: Client -> Message -> IO ()
-messageHandler client (Message _ "NICK" (p:ps)) = putStrLn $ "nick = " ++ p
-messageHandler client (Message _ "USER" ps)     = putStrLn $ "user = " ++ (show ps)
-messageHandler client (Message _ op ps)         = putStrLn $ op ++ " and " ++ (show ps)
+messageHandler :: Client -> Message -> IO Bool
+messageHandler client (Message _ "NICK" (p:ps)) = do
+    putStrLn $ "nick = " ++ p
+    return True
+
+messageHandler client (Message _ op ps) = do
+    putStrLn $ op ++ " and " ++ (show ps)
+    return True
