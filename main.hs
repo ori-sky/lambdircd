@@ -46,7 +46,7 @@ data Client = Client
     }
 
 sToMessage :: String -> Message
-sToMessage (':':s) = Message (Just $ StringPrefix $ head $ words s)
+sToMessage (':':s) = Message (Just . StringPrefix . head . words $ s)
     (words s !! 1) []
 sToMessage s = Message Nothing "command" []
 
