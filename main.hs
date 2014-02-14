@@ -23,6 +23,7 @@ import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.STM
 import Control.Monad
 
+-- left associative application
 ($>) :: (a -> b) -> a -> b
 f $> x = f x
 infixl 0 $>
@@ -49,10 +50,15 @@ data Client = Client
     , clientNick        :: Maybe String
     }
 
-sToMessage :: String -> Message
-sToMessage (':':s) = Message (Just . StringPrefix . head . words $ s)
-    (words s !! 1) []
-sToMessage s = Message Nothing "command" []
+parseMessage :: String -> Message
+parseMessage (':':s) = Message
+    (Just (StringPrefix $ head.words $ s))
+    (head.tail.words $ s)
+    (tail.tail.words $ s)
+parseMessage s = Message
+    Nothing
+    (head.words $ s)
+    (tail.words $ s)
 
 main :: IO ()
 main = do
@@ -88,14 +94,8 @@ clientLoop' pinged client = do
 clientHandler :: Client -> IO Bool
 clientHandler client = do
     line <- hGetLine (clientHandle client)
-    messageHandler client $ sToMessage line
+    messageHandler client $ parseMessage line
     clientHandler client
 
 messageHandler :: Client -> Message -> IO Bool
-messageHandler client (Message _ "NICK" (p:ps)) = do
-    putStrLn $ "nick = " ++ p
-    return True
-
-messageHandler client (Message _ op ps) = do
-    putStrLn $ op ++ " and " ++ (show ps)
-    return True
+messageHandler _ message = putStrLn (show message) >> return True
