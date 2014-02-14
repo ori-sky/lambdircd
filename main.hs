@@ -31,16 +31,24 @@ data Prefix = StringPrefix String
                 , host  :: String
                 }
 
+instance Show Prefix where
+    show (StringPrefix s) = s
+    show (MaskPrefix n u h) = n ++ ('!':u) ++ ('@':h)
+
 data Message = Message
     { messagePrefix     :: (Maybe Prefix)
     , messageCommand    :: String
     , messageParams     :: [String]
-    }
+    } deriving (Show)
 
 data Client = Client
     { clientHandle      :: Handle
     , clientNick        :: Maybe String
     }
+
+sToMessage :: String -> Message
+sToMessage (':':s) = Message (Just $ StringPrefix $ head $ words s) "command" []
+sToMessage s = Message Nothing "command" []
 
 main :: IO ()
 main = do
@@ -62,8 +70,7 @@ main = do
 clientHandler :: Client -> IO ()
 clientHandler client = do
     line <- hGetLine (clientHandle client)
-    let w:ws = words line
-    messageHandler client $ Message Nothing w ws
+    messageHandler client $ sToMessage line
     clientHandler client
 
 messageHandler :: Client -> Message -> IO ()
