@@ -135,16 +135,12 @@ messageHandler :: Client -> Message -> IO Client
 messageHandler client message = putStrLn (show message) >> messageProcessor client message
 
 messageProcessor :: Client -> Message -> IO Client
--- NICK processor
-messageProcessor client (Message _ "NICK" (nick:_)) = return client {clientNick = Just nick}
--- USER processor
-messageProcessor client (Message _ "USER" (user:mode:unused:realname:_)) =
-    return client {clientUser = Just user, clientRealName = Just realname}
--- PING processor
 messageProcessor client (Message _ "PING" (server1:_)) = do
     clientSend client $ ":lambdircd PONG lambdircd :" ++ server1
     return client
--- default processor (Unknown Command)
+messageProcessor client (Message _ "NICK" (nick:_)) = return client {clientNick = Just nick}
+messageProcessor client (Message _ "USER" (user:mode:unused:realname:_)) =
+    return client {clientUser = Just user, clientRealName = Just realname}
 messageProcessor client (Message _ command _) = do
     clientSend client $ ":lambdircd 421 " ++ nick ++ (' ':command) ++ " :Unknown command"
     return client
