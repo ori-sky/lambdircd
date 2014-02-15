@@ -72,6 +72,7 @@ parseMessage (':':s) = Message
     (Just (StringPrefix $ head.words $ s))
     (head.tail.ircParams $ s)
     (tail.tail.ircParams $ s)
+parseMessage "" = Message "" []
 parseMessage s = Message
     Nothing
     (head.ircParams $ s)
