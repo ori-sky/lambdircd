@@ -53,13 +53,18 @@ data Client = Client
     , clientNick        :: Maybe String
     , clientUser        :: Maybe String
     , clientRealName    :: Maybe String
-    }
+    } deriving (Show)
 clientDefault = Client
     { clientHandle      = Nothing
     , clientNick        = Nothing
     , clientUser        = Nothing
     , clientRealName    = Nothing
     }
+clientRegistered :: Client -> Bool
+clientRegistered client =
+    isJust (clientNick client) &&
+    isJust (clientUser client) &&
+    isJust (clientRealName client)
 
 ircParams :: String -> [String]
 ircParams "" = []
@@ -90,15 +95,21 @@ main = do
             let client = clientDefault {clientHandle=Just handle}
 
             putStrLn "connected"
-            mClient <- timeout 15000000 $ clientHandler client
+            mClient <- timeout 15000000 $ clientRegistration client
             case mClient of
-                Nothing     -> return ()
-                _           -> clientLoop (fromJust mClient)
+                Nothing -> return ()
+                _       -> clientLoop $ fromJust mClient
             putStrLn "disconnected"
         )
 
-clientLoop :: Client -> IO ()
-clientLoop = clientLoop' False
+clientRegistration :: Client -> IO Client
+clientRegistration client = do
+    line <- hGetLine $ fromJust (clientHandle client)
+    client <- messageHandler client (parseMessage line)
+    case clientRegistered client of
+        True    -> return client
+        False   -> clientRegistration client
+
 clientLoop' :: Bool -> Client -> IO ()
 clientLoop' pinged client = do
     mClient <- timeout 90000000 $ clientHandler client
@@ -108,20 +119,30 @@ clientLoop' pinged client = do
             False       -> clientLoop' True client
         _           -> clientLoop (fromJust mClient)
 
+clientLoop :: Client -> IO ()
+clientLoop client = do
+    hPutStr handle
+        $ ":lambdircd 001 " ++ nick
+        ++ " :Welcome to the lambdircd Internet Relay Network " ++ nick
+        ++ "\r\n"
+    clientLoop' False client
+  where
+    handle = fromJust $ clientHandle client
+    nick = fromJust $ clientNick client
+
 clientHandler :: Client -> IO Client
 clientHandler client = do
     line <- hGetLine $ fromJust (clientHandle client)
     client <- messageHandler client (parseMessage line)
-    putStrLn $ show (clientNick client)
     clientHandler client
 
 messageHandler :: Client -> Message -> IO Client
 messageHandler client (Message
     { messageCommand    = "NICK"
     , messageParams     = nick:_
-    })
-    = return client {clientNick=Just nick}
---messageHandler client (Message
---    { messageCommand    = "USER"
---    , mesageParams      =
+    }) = return client {clientNick=Just nick}
+messageHandler client (Message
+    { messageCommand    = "USER"
+    , messageParams     = user:mode:unused:realname:_
+    }) = return client {clientUser=Just user, clientRealName=Just realname}
 messageHandler client message = putStrLn (show message) >> return client
