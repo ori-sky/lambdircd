@@ -15,6 +15,7 @@
 
 import Data.Char
 import Data.List
+import Data.Maybe
 import System.Environment (getArgs)
 import System.IO
 import System.Timeout
@@ -80,11 +81,10 @@ main = do
             let client = Client handle Nothing
 
             putStrLn "connected"
-            result <- timeout 15000000 $ clientHandler client
-            case result of
+            mClient <- timeout 15000000 $ clientHandler client
+            case mClient of
                 Nothing     -> return ()
-                Just False  -> return ()
-                _           -> clientLoop client
+                _           -> clientLoop (fromJust mClient)
             putStrLn "disconnected"
         )
 
@@ -92,19 +92,18 @@ clientLoop :: Client -> IO ()
 clientLoop = clientLoop' False
 clientLoop' :: Bool -> Client -> IO ()
 clientLoop' pinged client = do
-    result <- timeout 90000000 $ clientHandler client
-    case result of
+    mClient <- timeout 90000000 $ clientHandler client
+    case mClient of
         Nothing     -> case pinged of
             True        -> return ()
             False       -> clientLoop' True client
-        Just False  -> return ()
-        _           -> clientLoop client
+        _           -> clientLoop (fromJust mClient)
 
-clientHandler :: Client -> IO Bool
+clientHandler :: Client -> IO Client
 clientHandler client = do
     line <- hGetLine (clientHandle client)
-    messageHandler client $ parseMessage line
+    client <- messageHandler client (parseMessage line)
     clientHandler client
 
-messageHandler :: Client -> Message -> IO Bool
-messageHandler _ message = putStrLn (show message) >> return True
+messageHandler :: Client -> Message -> IO Client
+messageHandler client message = putStrLn (show message) >> return client
