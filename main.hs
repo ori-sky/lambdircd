@@ -68,7 +68,7 @@ ircParams s = x : (ircParams.(drop 1) $ xs)
   where (x, xs) = break isSpace s
 
 parseMessage :: String -> Message
-parseMessage "" = Message "" []
+parseMessage "" = Message Nothing "" []
 parseMessage (':':s) = Message
     (Just (StringPrefix $ head.words $ s))
     (head.tail.ircParams $ s)
@@ -116,6 +116,12 @@ clientHandler client = do
     clientHandler client
 
 messageHandler :: Client -> Message -> IO Client
-messageHandler client (Message {messageCommand="NICK", messageParams=(nick:_)})
+messageHandler client (Message
+    { messageCommand    = "NICK"
+    , messageParams     = nick:_
+    })
     = return client {clientNick=Just nick}
+--messageHandler client (Message
+--    { messageCommand    = "USER"
+--    , mesageParams      =
 messageHandler client message = putStrLn (show message) >> return client
