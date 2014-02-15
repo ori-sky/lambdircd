@@ -7,4 +7,4 @@ main:
 	ghc --make $(CFLAGS) main
 
 clean: 
-	rm main *.o *.hi
+	rm -f main *.o *.hi
