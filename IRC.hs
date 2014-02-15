@@ -2,7 +2,12 @@ module IRC
 ( Hostmask(..)
 , Prefix(..)
 , Message(..)
+, ircParams
+, parseMessage
 ) where
+
+import Data.Char
+import LeftApplication
 
 data Hostmask = Hostmask
     { nick  :: String
@@ -23,3 +28,19 @@ data Message = Message
     , command   :: String
     , params    :: [String]
     } deriving (Show)
+
+ircParams :: String -> [String]
+ircParams "" = []
+ircParams (':':xs) = [xs]
+ircParams s = x : (ircParams $ drop 1 xs)
+  where (x, xs) = break isSpace s
+
+parseMessage :: String -> Message
+parseMessage "" = Message Nothing "" []
+parseMessage (':':s) = Message
+    $> Just (StringPrefix $ (head.words) s)
+    $> (head.tail.ircParams) s
+    $> (tail.tail.ircParams) s
+parseMessage s = Message Nothing
+    $> (head.ircParams) s
+    $> (tail.ircParams) s
