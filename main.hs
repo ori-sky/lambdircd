@@ -71,7 +71,7 @@ messageProcessor client (Message _ "PING" (server1:_)) = do
     sendClient client $ ":lambdircd PONG lambdircd :" ++ server1
     return client
 messageProcessor client (Message _ "NICK" (nick:_)) = return client {IRCD.nick = Just nick}
-messageProcessor client (Message _ "USER" (user:_:_:realname:_)) =
+messageProcessor client (Message _ "USER" (user:_:_:[realname])) =
     return client {IRCD.user = Just user, realName = Just realname}
 messageProcessor client (Message _ command _) = do
     sendClient client $ ":lambdircd 421 " ++ nick ++ (' ':command) ++ " :Unknown command"
