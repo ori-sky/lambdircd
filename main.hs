@@ -55,11 +55,8 @@ data Client = Client
 ircParams :: String -> [String]
 ircParams "" = []
 ircParams (':':xs) = [xs]
-ircParams s
-    | filter isSpace s == []    = [s]
-    | otherwise = (takeWhile notSpace s) : (ircParams.tail $ dropWhile notSpace s)
-  where
-    notSpace = not . isSpace
+ircParams s = x : (ircParams.(drop 1) $ xs)
+  where (x, xs) = break isSpace s
 
 parseMessage :: String -> Message
 parseMessage (':':s) = Message
