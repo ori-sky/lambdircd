@@ -25,28 +25,8 @@ import Network.SocketServer
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.STM
 import Control.Monad
-
--- left associative application
-($>) :: (a -> b) -> a -> b
-f $> x = f x
-infixl 0 $>
-
-data Prefix = StringPrefix String
-            | MaskPrefix
-                { prefixNick  :: String
-                , prefixUser  :: String
-                , prefixHost  :: String
-                }
-
-instance Show Prefix where
-    show (StringPrefix s) = s
-    show (MaskPrefix n u h) = n ++ ('!':u) ++ ('@':h)
-
-data Message = Message
-    { messagePrefix     :: Maybe Prefix
-    , messageCommand    :: String
-    , messageParams     :: [String]
-    } deriving (Show)
+import LeftApplication
+import IRC
 
 data Client = Client
     { clientHandle      :: Maybe Handle
