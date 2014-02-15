@@ -30,9 +30,9 @@ infixl 0 $>
 
 data Prefix = StringPrefix String
             | MaskPrefix
-                { nick  :: String
-                , user  :: String
-                , host  :: String
+                { prefixNick  :: String
+                , prefixUser  :: String
+                , prefixHost  :: String
                 }
 
 instance Show Prefix where
@@ -73,10 +73,11 @@ main = do
 
             putStrLn "connected"
             result <- timeout 15000000 $ clientHandler client
-            -- TODO: return if Nothing
-            clientLoop client
+            case result of
+                Nothing     -> return ()
+                Just False  -> return ()
+                _           -> clientLoop client
             putStrLn "disconnected"
-            return ()
         )
 
 clientLoop :: Client -> IO ()
