@@ -137,12 +137,17 @@ clientHandler client = do
     clientHandler client
 
 messageHandler :: Client -> Message -> IO Client
-messageHandler client (Message
+messageHandler client message = do
+    putStrLn $ show message
+    messageProcessor client message
+
+messageProcessor :: Client -> Message -> IO Client
+messageProcessor client (Message
     { messageCommand    = "NICK"
     , messageParams     = nick:_
     }) = return client {clientNick=Just nick}
-messageHandler client (Message
+messageProcessor client (Message
     { messageCommand    = "USER"
     , messageParams     = user:mode:unused:realname:_
     }) = return client {clientUser=Just user, clientRealName=Just realname}
-messageHandler client message = putStrLn (show message) >> return client
+messageProcessor client _ = return client
