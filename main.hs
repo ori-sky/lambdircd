@@ -18,31 +18,7 @@ import System.IO
 import System.Timeout
 import Network.SocketServer
 import IRC
-
-data Client = Client
-    { clientHandle      :: Maybe Handle
-    , clientNick        :: Maybe String
-    , clientUser        :: Maybe String
-    , clientRealName    :: Maybe String
-    } deriving (Show)
-
-clientDefault :: Client
-clientDefault = Client
-    { clientHandle      = Nothing
-    , clientNick        = Nothing
-    , clientUser        = Nothing
-    , clientRealName    = Nothing
-    }
-clientRegistered :: Client -> Bool
-clientRegistered client =
-    isJust (clientNick client) &&
-    isJust (clientUser client) &&
-    isJust (clientRealName client)
-
-clientSend :: Client -> String -> IO ()
-clientSend client s = do
-    putStrLn $ "-> " ++ s
-    hPutStr (fromJust $ clientHandle client) $ s ++ "\r\n"
+import IRC.Server as IRCD
 
 main :: IO ()
 main = do
@@ -53,7 +29,7 @@ main = do
             hSetNewlineMode handle universalNewlineMode
             hSetEncoding handle utf8
 
-            mClient <- timeout 15000000 $ clientRegistration (clientDefault {clientHandle = Just handle})
+            mClient <- timeout 15000000 $ clientRegistration (defaultClient {handle = Just handle})
             case mClient of
                 Nothing -> return ()
                 _       -> clientLoop $ fromJust mClient
@@ -61,9 +37,9 @@ main = do
 
 clientRegistration :: Client -> IO Client
 clientRegistration client = do
-    line <- hGetLine $ fromJust (clientHandle client)
+    line <- hGetLine $ fromJust (handle client)
     newClient <- messageHandler client (parseMessage line)
-    case clientRegistered newClient of
+    case isClientRegistered newClient of
         True    -> return newClient
         False   -> clientRegistration newClient
 
@@ -73,18 +49,18 @@ clientLoop' pinged client = do
     case mClient of
         Nothing     -> case pinged of
             True        -> return ()
-            False       -> clientSend client "PING : lambdircd" >> clientLoop' True client
+            False       -> sendClient client "PING : lambdircd" >> clientLoop' True client
         _           -> clientLoop' False (fromJust mClient)
 
 clientLoop :: Client -> IO ()
 clientLoop client = do
-    clientSend client $ ":lambdircd 001 "++nick++" :Welcome to the lambdircd Internet Relay Network "++nick
+    sendClient client $ ":lambdircd 001 "++nick++" :Welcome to the lambdircd Internet Relay Network "++nick
     clientLoop' False client
-  where nick = fromJust $ clientNick client
+  where nick = fromJust $ IRCD.nick client
 
 lineHandler :: Client -> IO Client
 lineHandler client = do
-    line <- hGetLine $ fromJust (clientHandle client)
+    line <- hGetLine $ fromJust (handle client)
     messageHandler client (parseMessage line)
 
 messageHandler :: Client -> Message -> IO Client
@@ -92,12 +68,12 @@ messageHandler client message = putStrLn (show message) >> messageProcessor clie
 
 messageProcessor :: Client -> Message -> IO Client
 messageProcessor client (Message _ "PING" (server1:_)) = do
-    clientSend client $ ":lambdircd PONG lambdircd :" ++ server1
+    sendClient client $ ":lambdircd PONG lambdircd :" ++ server1
     return client
-messageProcessor client (Message _ "NICK" (nick:_)) = return client {clientNick = Just nick}
+messageProcessor client (Message _ "NICK" (nick:_)) = return client {IRCD.nick = Just nick}
 messageProcessor client (Message _ "USER" (user:_:_:realname:_)) =
-    return client {clientUser = Just user, clientRealName = Just realname}
+    return client {IRCD.user = Just user, realName = Just realname}
 messageProcessor client (Message _ command _) = do
-    clientSend client $ ":lambdircd 421 " ++ nick ++ (' ':command) ++ " :Unknown command"
+    sendClient client $ ":lambdircd 421 " ++ nick ++ (' ':command) ++ " :Unknown command"
     return client
-  where nick = fromJust $ clientNick client
+  where nick = fromJust $ IRCD.nick client
