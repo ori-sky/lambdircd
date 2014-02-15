@@ -83,6 +83,11 @@ parseMessage s = Message
     (head.ircParams $ s)
     (tail.ircParams $ s)
 
+clientSend :: Client -> String -> IO ()
+clientSend client s = do
+    putStrLn $ "-> " ++ s
+    hPutStr (fromJust $ clientHandle client) $ s ++ "\r\n"
+
 main :: IO ()
 main = do
     serveTCPforever (simpleTCPOptions 6667) {reuse = True}
@@ -92,14 +97,10 @@ main = do
             hSetNewlineMode handle universalNewlineMode
             hSetEncoding handle utf8
 
-            let client = clientDefault {clientHandle=Just handle}
-
-            putStrLn "connected"
-            mClient <- timeout 15000000 $ clientRegistration client
+            mClient <- timeout 15000000 $ clientRegistration (clientDefault {clientHandle = Just handle})
             case mClient of
                 Nothing -> return ()
                 _       -> clientLoop $ fromJust mClient
-            putStrLn "disconnected"
         )
 
 clientRegistration :: Client -> IO Client
@@ -116,21 +117,14 @@ clientLoop' pinged client = do
     case mClient of
         Nothing     -> case pinged of
             True        -> return ()
-            False       -> do
-                hPutStr (fromJust $ clientHandle client) "PING :lambdircd\r\n"
-                clientLoop' True client
+            False       -> clientSend client "PING : lambdircd" >> clientLoop' True client
         _           -> clientLoop' False (fromJust mClient)
 
 clientLoop :: Client -> IO ()
 clientLoop client = do
-    hPutStr handle
-        $ ":lambdircd 001 " ++ nick
-        ++ " :Welcome to the lambdircd Internet Relay Network " ++ nick
-        ++ "\r\n"
+    clientSend client $ ":lambdircd 001 "++nick++" :Welcome to the lambdircd Internet Relay Network "++nick
     clientLoop' False client
-  where
-    handle = fromJust $ clientHandle client
-    nick = fromJust $ clientNick client
+  where nick = fromJust $ clientNick client
 
 lineHandler :: Client -> IO Client
 lineHandler client = do
@@ -138,23 +132,20 @@ lineHandler client = do
     messageHandler client (parseMessage line)
 
 messageHandler :: Client -> Message -> IO Client
-messageHandler client message = do
-    putStrLn $ show message
-    messageProcessor client message
+messageHandler client message = putStrLn (show message) >> messageProcessor client message
 
 messageProcessor :: Client -> Message -> IO Client
-messageProcessor client (Message
-    { messageCommand    = "NICK"
-    , messageParams     = nick:_
-    }) = return client {clientNick=Just nick}
-messageProcessor client (Message
-    { messageCommand    = "USER"
-    , messageParams     = user:mode:unused:realname:_
-    }) = return client {clientUser=Just user, clientRealName=Just realname}
-messageProcessor client (Message
-    { messageCommand    = "PING"
-    , messageParams     = server1:_
-    }) = do
-        hPutStr (fromJust $ clientHandle client) $ ":lambdircd PONG lambdircd :" ++ server1 ++ "\r\n"
-        return client
-messageProcessor client _ = return client
+-- NICK processor
+messageProcessor client (Message _ "NICK" (nick:_)) = return client {clientNick = Just nick}
+-- USER processor
+messageProcessor client (Message _ "USER" (user:mode:unused:realname:_)) =
+    return client {clientUser = Just user, clientRealName = Just realname}
+-- PING processor
+messageProcessor client (Message _ "PING" (server1:_)) = do
+    clientSend client $ ":lambdircd PONG lambdircd :" ++ server1
+    return client
+-- default processor (Unknown Command)
+messageProcessor client (Message _ command _) = do
+    clientSend client $ ":lambdircd 421 " ++ nick ++ (' ':command) ++ " :Unknown command"
+    return client
+  where nick = fromJust $ clientNick client
