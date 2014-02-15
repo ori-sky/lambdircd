@@ -112,12 +112,14 @@ clientRegistration client = do
 
 clientLoop' :: Bool -> Client -> IO ()
 clientLoop' pinged client = do
-    mClient <- timeout 90000000 $ clientHandler client
+    mClient <- timeout 90000000 $ lineHandler client
     case mClient of
         Nothing     -> case pinged of
             True        -> return ()
-            False       -> clientLoop' True client
-        _           -> clientLoop (fromJust mClient)
+            False       -> do
+                hPutStr (fromJust $ clientHandle client) "PING :lambdircd\r\n"
+                clientLoop' True client
+        _           -> clientLoop' False (fromJust mClient)
 
 clientLoop :: Client -> IO ()
 clientLoop client = do
@@ -130,11 +132,10 @@ clientLoop client = do
     handle = fromJust $ clientHandle client
     nick = fromJust $ clientNick client
 
-clientHandler :: Client -> IO Client
-clientHandler client = do
+lineHandler :: Client -> IO Client
+lineHandler client = do
     line <- hGetLine $ fromJust (clientHandle client)
-    client <- messageHandler client (parseMessage line)
-    clientHandler client
+    messageHandler client (parseMessage line)
 
 messageHandler :: Client -> Message -> IO Client
 messageHandler client message = do
@@ -150,4 +151,10 @@ messageProcessor client (Message
     { messageCommand    = "USER"
     , messageParams     = user:mode:unused:realname:_
     }) = return client {clientUser=Just user, clientRealName=Just realname}
+messageProcessor client (Message
+    { messageCommand    = "PING"
+    , messageParams     = server1:_
+    }) = do
+        hPutStr (fromJust $ clientHandle client) $ ":lambdircd PONG lambdircd :" ++ server1 ++ "\r\n"
+        return client
 messageProcessor client _ = return client
