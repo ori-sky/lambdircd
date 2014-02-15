@@ -49,8 +49,16 @@ data Message = Message
     } deriving (Show)
 
 data Client = Client
-    { clientHandle      :: Handle
+    { clientHandle      :: Maybe Handle
     , clientNick        :: Maybe String
+    , clientUser        :: Maybe String
+    , clientRealName    :: Maybe String
+    }
+clientDefault = Client
+    { clientHandle      = Nothing
+    , clientNick        = Nothing
+    , clientUser        = Nothing
+    , clientRealName    = Nothing
     }
 
 ircParams :: String -> [String]
@@ -78,7 +86,7 @@ main = do
             hSetNewlineMode handle universalNewlineMode
             hSetEncoding handle utf8
 
-            let client = Client handle Nothing
+            let client = clientDefault {clientHandle=Just handle}
 
             putStrLn "connected"
             mClient <- timeout 15000000 $ clientHandler client
@@ -101,9 +109,12 @@ clientLoop' pinged client = do
 
 clientHandler :: Client -> IO Client
 clientHandler client = do
-    line <- hGetLine (clientHandle client)
+    line <- hGetLine $ fromJust (clientHandle client)
     client <- messageHandler client (parseMessage line)
+    putStrLn $ show (clientNick client)
     clientHandler client
 
 messageHandler :: Client -> Message -> IO Client
+messageHandler client (Message {messageCommand="NICK", messageParams=(nick:_)})
+    = return client {clientNick=Just nick}
 messageHandler client message = putStrLn (show message) >> return client
