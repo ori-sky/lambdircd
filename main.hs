@@ -68,11 +68,11 @@ ircParams s = x : (ircParams.(drop 1) $ xs)
   where (x, xs) = break isSpace s
 
 parseMessage :: String -> Message
+parseMessage "" = Message "" []
 parseMessage (':':s) = Message
     (Just (StringPrefix $ head.words $ s))
     (head.tail.ircParams $ s)
     (tail.tail.ircParams $ s)
-parseMessage "" = Message "" []
 parseMessage s = Message
     Nothing
     (head.ircParams $ s)
