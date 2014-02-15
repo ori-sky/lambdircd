@@ -13,6 +13,8 @@
  - limitations under the License.
  -}
 
+import Data.Char
+import Data.List
 import System.Environment (getArgs)
 import System.IO
 import System.Timeout
@@ -50,15 +52,24 @@ data Client = Client
     , clientNick        :: Maybe String
     }
 
+ircParams :: String -> [String]
+ircParams "" = []
+ircParams (':':xs) = [xs]
+ircParams s
+    | filter isSpace s == []    = [s]
+    | otherwise = (takeWhile notSpace s) : (ircParams.tail $ dropWhile notSpace s)
+  where
+    notSpace = not . isSpace
+
 parseMessage :: String -> Message
 parseMessage (':':s) = Message
     (Just (StringPrefix $ head.words $ s))
-    (head.tail.words $ s)
-    (tail.tail.words $ s)
+    (head.tail.ircParams $ s)
+    (tail.tail.ircParams $ s)
 parseMessage s = Message
     Nothing
-    (head.words $ s)
-    (tail.words $ s)
+    (head.ircParams $ s)
+    (tail.ircParams $ s)
 
 main :: IO ()
 main = do
