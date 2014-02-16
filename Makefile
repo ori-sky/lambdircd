@@ -1,5 +1,5 @@
 build:
-	ghc Main
+	ghc -W Main
 
 clean:
 	rm -f Main *.o *.hi
