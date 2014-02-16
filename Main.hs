@@ -27,7 +27,12 @@ handleMessage opts client message = do
 
 processMessage :: MessageHandler
 
-processMessage _ client (Message _ "NICK" (nick:_)) = return client {IRCD.nick=Just nick}
+processMessage _ client (Message _ "NICK" (nick:_))
+    | isClientRegistered client = do
+        sendClient client $ (':':nick') ++ " NICK :" ++ nick
+        return client {IRCD.nick=Just nick}
+    | otherwise = return client {IRCD.nick=Just nick}
+  where Just nick' = IRCD.nick client
 processMessage _ client (Message _ "NICK" _) = do
     sendClient client $ ":lambdircd 431 " ++ nick' ++ " :No nickname given"
     return client
