@@ -14,62 +14,14 @@
  -}
 
 import Data.Maybe
-import System.IO
-import System.Timeout
-import Network.SocketServer
 import IRC
 import IRC.Server as IRCD
-
-{-
-main :: IO ()
-main = do
-    serveTCPforever (simpleTCPOptions 6667) {reuse = True}
-        $ threadedHandler . handleHandler $
-        (\handle _ _ -> do
-            hSetBuffering handle NoBuffering
-            hSetNewlineMode handle universalNewlineMode
-            hSetEncoding handle utf8
-
-            mClient <- timeout 15000000 $ clientRegistration (defaultClient {handle = Just handle})
-            case mClient of
-                Nothing -> return ()
-                _       -> clientLoop $ fromJust mClient
-        )
-
-clientRegistration :: Client -> IO Client
-clientRegistration client = do
-    line <- hGetLine $ fromJust (handle client)
-    newClient <- messageHandler client (parseMessage line)
-    case isClientRegistered newClient of
-        True    -> return newClient
-        False   -> clientRegistration newClient
-
-clientLoop' :: Bool -> Client -> IO ()
-clientLoop' pinged client = do
-    mClient <- timeout 90000000 $ lineHandler client
-    case mClient of
-        Nothing     -> case pinged of
-            True        -> return ()
-            False       -> sendClient client "PING : lambdircd" >> clientLoop' True client
-        _           -> clientLoop' False (fromJust mClient)
-
-clientLoop :: Client -> IO ()
-clientLoop client = do
-    sendClient client $ ":lambdircd 001 "++nick++" :Welcome to the lambdircd Internet Relay Network "++nick
-    clientLoop' False client
-  where nick = fromJust $ IRCD.nick client
-
-lineHandler :: Client -> IO Client
-lineHandler client = do
-    line <- hGetLine $ fromJust (handle client)
-    messageHandler client (parseMessage line)
--}
 
 main :: IO ()
 main = serveIRC defaultOptions messageHandler
 
 messageHandler :: Options -> Client -> Message -> IO Client
-messageHandler opts client message = putStrLn (show message) >> messageProcessor client message
+messageHandler _ client message = putStrLn (show message) >> messageProcessor client message
 
 messageProcessor :: Client -> Message -> IO Client
 messageProcessor client (Message _ "PONG" _) = return client
