@@ -20,10 +20,11 @@ import Network.SocketServer
 import IRC
 import IRC.Server as IRCD
 
+{-
 main :: IO ()
 main = do
     serveTCPforever (simpleTCPOptions 6667) {reuse = True}
-        $ threadedHandler $ handleHandler
+        $ threadedHandler . handleHandler $
         (\handle _ _ -> do
             hSetBuffering handle NoBuffering
             hSetNewlineMode handle universalNewlineMode
@@ -62,11 +63,16 @@ lineHandler :: Client -> IO Client
 lineHandler client = do
     line <- hGetLine $ fromJust (handle client)
     messageHandler client (parseMessage line)
+-}
 
-messageHandler :: Client -> Message -> IO Client
-messageHandler client message = putStrLn (show message) >> messageProcessor client message
+main :: IO ()
+main = serveIRC defaultOptions messageHandler
+
+messageHandler :: Options -> Client -> Message -> IO Client
+messageHandler opts client message = putStrLn (show message) >> messageProcessor client message
 
 messageProcessor :: Client -> Message -> IO Client
+messageProcessor client (Message _ "PONG" _) = return client
 messageProcessor client (Message _ "PING" (server1:_)) = do
     sendClient client $ ":lambdircd PONG lambdircd :" ++ server1
     return client
