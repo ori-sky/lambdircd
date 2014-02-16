@@ -38,11 +38,19 @@ processMessage _ client (Message _ "NICK" _) = do
     return client
   where nick' = fromMaybe "*" (IRCD.nick client)
 
-processMessage _ client (Message _ "USER" (user:_:_:realname:_)) =
-    return client {IRCD.user=Just user, realName=Just realname}
-processMessage _ client (Message _ "USER" _) = do
-    sendClient client $ ":lambdircd 461 " ++ nick' ++ " USER :Not enough parameters"
-    return client
+processMessage _ client (Message _ "USER" (user:_:_:realname:_))
+    | isClientRegistered client = do
+        sendClient client $ ":lambdircd 462 " ++ nick' ++ " :You may not reregister"
+        return client
+    | otherwise = return client {IRCD.user=Just user, realName=Just realname}
+  where Just nick' = IRCD.nick client
+processMessage _ client (Message _ "USER" _)
+    | isClientRegistered client = do
+        sendClient client $ ":lambdircd 462 " ++ nick' ++ " :You may not reregister"
+        return client
+    | otherwise = do
+        sendClient client $ ":lambdircd 461 " ++ nick' ++ " USER :Not enough parameters"
+        return client
   where nick' = fromMaybe "*" (IRCD.nick client)
 
 processMessage _ client (Message _ "PONG" _) = return client
