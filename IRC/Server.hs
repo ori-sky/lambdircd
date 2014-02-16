@@ -77,7 +77,8 @@ isClientRegistered client =
 sendClient :: Client -> String -> IO ()
 sendClient client message = do
     putStrLn $ "-> " ++ message
-    hPutStr $> fromJust (handle client) $> message ++ "\r\n"
+    hPutStr handle' $ message ++ "\r\n"
+  where Just handle' = IRC.Server.handle client
 
 registerClient :: Options -> MessageHandler -> Client -> IO Client
 registerClient opts f client = do
