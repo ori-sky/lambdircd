@@ -1,11 +1,5 @@
-all: main
-again: clean main
+build:
+	ghc Main
 
-main:
-	ghc --make main
-
-strict:
-	ghc --make -W -Werror main
-
-clean: 
-	rm -f main *.o *.hi
+clean:
+	rm -f Main *.o *.hi
