@@ -18,11 +18,26 @@ import IRC
 import IRC.Server as IRCD
 
 main :: IO ()
-main = serveIRC defaultOptions messageHandler
+main = serveIRC defaultOptions handleMessage
 
-messageHandler :: Options -> Client -> Message -> IO Client
-messageHandler _ client message = putStrLn (show message) >> messageProcessor client message
+handleMessage :: MessageHandler
+handleMessage opts client message = do
+    putStrLn $ show message
+    processMessage opts client message
 
+processMessage :: MessageHandler
+
+processMessage _ client (Message _ "NICK" (nick:_)) = return client {IRCD.nick=Just nick}
+processMessage _ client (Message _ "NICK" _) = do
+    sendClient client ":lambdircd 431 * :No nickname given"
+    return client
+
+processMessage _ client (Message _ command _) = do
+    sendClient client $ ":lambdircd 421 " ++ nick' ++ (' ':command) ++ " :Unknown command"
+    return client
+  where nick' = fromMaybe "*" (IRCD.nick client)
+
+{-
 messageProcessor :: Client -> Message -> IO Client
 messageProcessor client (Message _ "PONG" _) = return client
 messageProcessor client (Message _ "PING" (server1:_)) = do
@@ -35,3 +50,4 @@ messageProcessor client (Message _ command _) = do
     sendClient client $ ":lambdircd 421 " ++ nick ++ (' ':command) ++ " :Unknown command"
     return client
   where nick = fromJust $ IRCD.nick client
+-}
