@@ -40,6 +40,11 @@ processMessage _ client (Message _ "USER" _) = do
     return client
   where nick' = fromMaybe "*" (IRCD.nick client)
 
+processMessage _ client (Message _ "PONG" _) = return client
+processMessage _ client (Message _ "PING"(server1:_)) = do
+    sendClient client $ ":lambdircd PONG lambdircd :" ++ server1
+    return client
+
 processMessage _ client (Message _ command _) = do
     sendClient client $ ":lambdircd 421 " ++ nick' ++ (' ':command) ++ " :Unknown command"
     return client
