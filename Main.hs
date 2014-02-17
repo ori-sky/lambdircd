@@ -18,7 +18,11 @@ import IRC
 import IRC.Server as IRCD
 
 main :: IO ()
-main = serveIRC defaultOptions handleMessage
+main = serveIRC defaultOptions
+    { plugins   =
+        [ "HelloPlugin.o"
+        ]
+    } handleMessage
 
 handleMessage :: MessageHandler
 handleMessage opts client message = do

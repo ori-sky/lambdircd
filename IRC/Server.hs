@@ -30,6 +30,7 @@ import System.Timeout
 import Network.SocketServer
 import LeftApplication
 import qualified IRC as IRC
+import Plugin
 
 toMicro :: Num a => a -> a
 toMicro = (*1000000)
@@ -38,6 +39,7 @@ data Options = Options
     { port              :: Int
     , connectTimeout    :: Int
     , pingTimeout       :: Int
+    , plugins           :: [String]
     }
 
 defaultOptions :: Options
@@ -45,6 +47,7 @@ defaultOptions = Options
     { port              = 6667
     , connectTimeout    = 20
     , pingTimeout       = 240
+    , plugins           = []
     }
 
 type MessageHandler = Options -> Client -> IRC.Message -> IO Client
