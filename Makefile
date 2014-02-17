@@ -2,4 +2,4 @@ build:
 	ghc -W Main
 
 clean:
-	rm -f Main *.o *.hi
+	rm -f Main PluginsTest *.o *.hi
