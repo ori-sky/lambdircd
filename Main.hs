@@ -20,7 +20,7 @@ import IRC.Server as IRCD
 main :: IO ()
 main = serveIRC defaultOptions
     { plugins   =
-        [ "HelloPlugin.o"
+        [ "Pong"
         ]
     } handleMessage
 
