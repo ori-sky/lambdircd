@@ -15,22 +15,33 @@
 
 module IRC.Server
 ( Options(..)
-, defaultOptions
-, MessageHandler
-, serveIRC
 , Client(..)
+, MessageHandler
+, defaultOptions
 , defaultClient
+, serveIRC
 , isClientRegistered
 , sendClient
+, loadPlugin
 ) where
 
 import Data.Maybe
 import System.IO
 import System.Timeout
+import System.Plugins.Load
 import Network.SocketServer
 import LeftApplication
 import qualified IRC as IRC
-import Plugin
+import qualified Plugin as Plugin
+
+loadPlugin :: String -> IO (Maybe Plugin.Interface)
+loadPlugin name = do
+    p <- pdynload ("Plugins/"++name++".o") ["."] [] "Plugin.Interface" "plugin"
+    case p of
+        LoadSuccess _ a -> return $ Just $ case Plugin.name a of
+            ""  -> a {Plugin.name=name}
+            _   -> a
+        LoadFailure e   -> mapM_ putStrLn e >> return Nothing
 
 toMicro :: Num a => a -> a
 toMicro = (*1000000)
