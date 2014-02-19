@@ -17,8 +17,6 @@
 
 module Plugin where
 
-import System.Plugins
-
 data Interface = Interface
     { isPlugin  :: Bool
     , name      :: String
@@ -28,10 +26,3 @@ defaultPlugin = Interface
     { isPlugin  = True
     , name      = ""
     }
-
-loadPlugin :: String -> String -> IO (Maybe Interface)
-loadPlugin includePath path = do
-    p <- pdynload path [includePath] [] "Plugin.Interface" "plugin"
-    case p of
-        LoadSuccess _ a -> return (Just a)
-        LoadFailure e   -> mapM_ putStrLn e >> return Nothing
