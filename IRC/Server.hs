@@ -14,15 +14,7 @@
  -}
 
 module IRC.Server
-( Options(..)
-, Client(..)
-, MessageHandler
-, defaultOptions
-, defaultClient
-, serveIRC
-, isClientRegistered
-, sendClient
-, loadPlugin
+( serveIRC
 ) where
 
 import System.IO
