@@ -16,13 +16,13 @@
 module Plugin.Load where
 
 import System.Plugins.Load
-import qualified Plugin as Plugin
+import qualified Plugin.API as API
 
-loadPlugin :: String -> IO (Maybe Plugin.Interface)
+loadPlugin :: String -> IO (Maybe API.Interface)
 loadPlugin name = do
-    p <- pdynload ("plugins/"++name++".o") ["."] [] "Plugin.Interface" "plugin"
+    p <- pdynload ("plugins/"++name++".o") ["."] [] "Plugin.API.Interface" "plugin"
     case p of
-        LoadSuccess _ a -> return $ Just $ case Plugin.name a of
-            ""  -> a {Plugin.name=name}
+        LoadSuccess _ a -> return $ Just $ case API.name a of
+            ""  -> a {API.name=name}
             _   -> a
         LoadFailure e   -> mapM_ putStrLn e >> return Nothing
