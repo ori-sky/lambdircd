@@ -17,12 +17,16 @@
 
 module Plugin where
 
+import IRC.Server.MessageHandler
+
 data Interface = Interface
     { isPlugin  :: Bool
     , name      :: String
+    , process   :: MessageHandler
     }
 
 defaultPlugin = Interface
     { isPlugin  = True
     , name      = ""
+    , process = (\_ client _ -> return client)
     }

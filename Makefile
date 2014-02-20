@@ -1,19 +1,13 @@
 all: build-plugins build-main
 
 build-plugins:
-	ghc -W Plugins/*.hs
+	ghc -W plugins/*.hs
 
 build-main:
 	ghc -W Main
 
-clean: clean-irc clean-plugins clean-main
-#	rm -f Main PluginsTest *.o *.hi IRC/*.o IRC/*.hi Plugins/*.o Plugins/*.hi
-
-clean-irc:
-	rm -f IRC/*.o IRC/*.hi
-
-clean-plugins:
-	rm -f Plugins/*.o Plugins/*.hi
-
-clean-main:
+clean:
 	rm -f Main *.o *.hi
+	rm -f IRC/*.o IRC/*.hi IRC/**/*.o IRC/**/*.hi
+	rm -f Plugin/*.o Plugin/*.hi Plugin/**/*.o Plugin/**/*.hi
+	rm -f plugins/*.o plugins/*.hi

@@ -25,43 +25,18 @@ module IRC.Server
 , loadPlugin
 ) where
 
-import Data.Maybe
 import System.IO
 import System.Timeout
-import System.Plugins.Load
 import Network.SocketServer
 import LeftApplication
 import qualified IRC as IRC
-import qualified Plugin as Plugin
-
-loadPlugin :: String -> IO (Maybe Plugin.Interface)
-loadPlugin name = do
-    p <- pdynload ("Plugins/"++name++".o") ["."] [] "Plugin.Interface" "plugin"
-    case p of
-        LoadSuccess _ a -> return $ Just $ case Plugin.name a of
-            ""  -> a {Plugin.name=name}
-            _   -> a
-        LoadFailure e   -> mapM_ putStrLn e >> return Nothing
+import IRC.Server.Options
+import IRC.Server.Client
+import IRC.Server.MessageHandler
+import Plugin.Load
 
 toMicro :: Num a => a -> a
 toMicro = (*1000000)
-
-data Options = Options
-    { port              :: Int
-    , connectTimeout    :: Int
-    , pingTimeout       :: Int
-    , plugins           :: [String]
-    }
-
-defaultOptions :: Options
-defaultOptions = Options
-    { port              = 6667
-    , connectTimeout    = 20
-    , pingTimeout       = 240
-    , plugins           = []
-    }
-
-type MessageHandler = Options -> Client -> IRC.Message -> IO Client
 
 serveIRC :: Options -> MessageHandler -> IO ()
 serveIRC opts f = serveTCPforever
@@ -79,35 +54,8 @@ serveIRC opts f = serveTCPforever
                 sendClient client' $ ":lambdircd 001 " ++ nick
                     ++ " :Welcome to the lambdircd Internet Relay Network " ++ nick
                 loopClient opts f client' False
-              where Just nick = IRC.Server.nick client'
+              where Just nick = IRC.Server.Client.nick client'
     )
-
-data Client = Client
-    { handle      :: Maybe Handle
-    , nick        :: Maybe String
-    , user        :: Maybe String
-    , realName    :: Maybe String
-    } deriving (Show)
-
-defaultClient :: Client
-defaultClient = Client
-    { handle      = Nothing
-    , nick        = Nothing
-    , user        = Nothing
-    , realName    = Nothing
-    }
-
-isClientRegistered :: Client -> Bool
-isClientRegistered client =
-    isJust (nick client) &&
-    isJust (user client) &&
-    isJust (realName client)
-
-sendClient :: Client -> String -> IO ()
-sendClient client message = do
-    putStrLn $ "-> " ++ message
-    hPutStr handle' $ message ++ "\r\n"
-  where Just handle' = IRC.Server.handle client
 
 registerClient :: Options -> MessageHandler -> Client -> IO Client
 registerClient opts f client = do
