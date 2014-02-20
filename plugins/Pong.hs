@@ -15,6 +15,6 @@
 
 module Pong where
 
-import Plugin.API
+import Plugin
 
 plugin = defaultPlugin

@@ -15,7 +15,7 @@
 
 {-# LANGUAGE RankNTypes #-}
 
-module Plugin.API where
+module Plugin where
 
 import IRC.Server.MessageHandler
 
