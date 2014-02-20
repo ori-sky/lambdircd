@@ -33,7 +33,7 @@ toMicro = (*1000000)
 
 serveIRC :: Options -> MessageHandler -> IO ()
 serveIRC opts f = do
-    plugins <- sequence $ map loadPlugin (plugins opts)
+    plugins <- mapM loadPlugin (plugins opts)
     putStrLn $ show (length $ catMaybes plugins)
     serveTCPforever
         $> (simpleTCPOptions (port opts)) {reuse = True}
