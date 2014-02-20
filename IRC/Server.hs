@@ -17,6 +17,7 @@ module IRC.Server
 ( serveIRC
 ) where
 
+import Data.Maybe
 import System.IO
 import System.Timeout
 import Network.SocketServer
@@ -31,23 +32,26 @@ toMicro :: Num a => a -> a
 toMicro = (*1000000)
 
 serveIRC :: Options -> MessageHandler -> IO ()
-serveIRC opts f = serveTCPforever
-    $> (simpleTCPOptions (port opts)) {reuse = True}
-    $> (threadedHandler . handleHandler) (\handle _ _ -> do
-        hSetBuffering handle NoBuffering
-        hSetNewlineMode handle universalNewlineMode
-        hSetEncoding handle utf8
-        maybeClient <- timeout
-            $> toMicro (connectTimeout opts)
-            $> registerClient opts f (defaultClient {handle = Just handle})
-        case maybeClient of
-            Nothing         -> return ()
-            Just client'    -> do
-                sendClient client' $ ":lambdircd 001 " ++ nick
-                    ++ " :Welcome to the lambdircd Internet Relay Network " ++ nick
-                loopClient opts f client' False
-              where Just nick = IRC.Server.Client.nick client'
-    )
+serveIRC opts f = do
+    plugins <- sequence $ map loadPlugin (plugins opts)
+    putStrLn $ show (length $ catMaybes plugins)
+    serveTCPforever
+        $> (simpleTCPOptions (port opts)) {reuse = True}
+        $> (threadedHandler . handleHandler) (\handle _ _ -> do
+            hSetBuffering handle NoBuffering
+            hSetNewlineMode handle universalNewlineMode
+            hSetEncoding handle utf8
+            maybeClient <- timeout
+                $> toMicro (connectTimeout opts)
+                $> registerClient opts f (defaultClient {handle = Just handle})
+            case maybeClient of
+                Nothing         -> return ()
+                Just client'    -> do
+                    sendClient client' $ ":lambdircd 001 " ++ nick
+                        ++ " :Welcome to the lambdircd Internet Relay Network " ++ nick
+                    loopClient opts f client' False
+                  where Just nick = IRC.Server.Client.nick client'
+        )
 
 registerClient :: Options -> MessageHandler -> Client -> IO Client
 registerClient opts f client = do

@@ -21,7 +21,7 @@ import IRC.Server.Client as Client
 import IRC.Server.MessageHandler
 
 main :: IO ()
-main = serveIRC defaultOptions
+main = serveIRC defaultOptions {pingTimeout=5}
     { plugins   =
         [ "Pong"
         ]
@@ -60,7 +60,7 @@ processMessage _ client (Message _ "USER" _)
         return client
   where nick' = fromMaybe "*" (Client.nick client)
 
-processMessage _ client (Message _ "PONG" _) = return client
+--processMessage _ client (Message _ "PONG" _) = return client
 processMessage _ client (Message _ "PING"(server1:_)) = do
     sendClient client $ ":lambdircd PONG lambdircd :" ++ server1
     return client
