@@ -1,13 +1,14 @@
+EXECUTABLE=lambdircd
+
 all: build-plugins build-main
 
 build-plugins:
-	ghc -W plugins/*.hs
+	ghc -W -isrc plugins/*.hs
 
 build-main:
-	ghc -W Main
+	ghc -W -isrc src/Main -o $(EXECUTABLE)
 
 clean:
-	rm -f Main *.o *.hi
-	rm -f IRC/*.o IRC/*.hi IRC/**/*.o IRC/**/*.hi
-	rm -f Plugin/*.o Plugin/*.hi Plugin/**/*.o Plugin/**/*.hi
-	rm -f plugins/*.o plugins/*.hi
+	rm -fv $(EXECUTABLE)
+	rm -fv src/*.o src/**/*.o
+	rm -fv plugins/*.o plugins/*.hi
