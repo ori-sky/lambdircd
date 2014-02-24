@@ -13,11 +13,11 @@
  - limitations under the License.
  -}
 
-module IRC.Server.MessageHandler where
+module IRC.Prefix where
 
-import IRC.Message
-import IRC.Server.Options
-import IRC.Server.Client
+import IRC.Hostmask
 
-type MessageHandler = Options -> Client -> Message -> IO Client
-
+data Prefix = StringPrefix String | MaskPrefix Hostmask
+instance Show Prefix where
+    show (StringPrefix s)   = s
+    show (MaskPrefix m)     = show m

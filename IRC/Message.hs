@@ -13,30 +13,11 @@
  - limitations under the License.
  -}
 
-module IRC
-( Hostmask(..)
-, Prefix(..)
-, Message(..)
-, ircParams
-, parseMessage
-) where
+module IRC.Message where
 
 import Data.Char
 import LeftApplication
-
-data Hostmask = Hostmask
-    { nick  :: String
-    , user  :: String
-    , host  :: String
-    }
-
-instance Show Hostmask where
-    show (Hostmask n u h) = n ++ ('!':u) ++ ('@':h)
-
-data Prefix = StringPrefix String | MaskPrefix Hostmask
-instance Show Prefix where
-    show (StringPrefix s)   = s
-    show (MaskPrefix m)     = show m
+import IRC.Prefix
 
 data Message = Message
     { prefix    :: Maybe Prefix

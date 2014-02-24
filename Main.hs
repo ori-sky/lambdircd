@@ -14,7 +14,7 @@
  -}
 
 import Data.Maybe
-import IRC
+import IRC.Message
 import IRC.Server as IRCD
 import IRC.Server.Options
 import IRC.Server.Client as Client

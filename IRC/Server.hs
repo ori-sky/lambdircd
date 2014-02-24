@@ -22,7 +22,7 @@ import System.IO
 import System.Timeout
 import Network.SocketServer
 import LeftApplication
-import qualified IRC as IRC
+import IRC.Message
 import IRC.Server.Options
 import IRC.Server.Client
 import IRC.Server.MessageHandler
@@ -30,6 +30,10 @@ import Plugin.Load
 
 toMicro :: Num a => a -> a
 toMicro = (*1000000)
+
+--serveIRC :: Env -> IO ()
+--serveIRC env = do
+--    plugins <- mapM loadPlugin $ plugins (opts env)
 
 serveIRC :: Options -> MessageHandler -> IO ()
 serveIRC opts f = do
@@ -56,7 +60,7 @@ serveIRC opts f = do
 registerClient :: Options -> MessageHandler -> Client -> IO Client
 registerClient opts f client = do
     line <- hGetLine handle'
-    newClient <- f opts client (IRC.parseMessage line)
+    newClient <- f opts client (parseMessage line)
     case isClientRegistered newClient of
         True    -> return newClient
         False   -> registerClient opts f newClient
@@ -77,5 +81,5 @@ loopClient opts f client pinged = do
 handleLine :: Options -> MessageHandler -> Client -> IO Client
 handleLine opts f client = do
     line <- hGetLine handle'
-    f opts client (IRC.parseMessage line)
+    f opts client (parseMessage line)
   where Just handle' = handle client
