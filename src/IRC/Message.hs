@@ -35,12 +35,15 @@ parseMessage :: String -> Message
 parseMessage "" = Message Nothing "" []
 -- duplicate code to correctly handle commands beginning with colon
 parseMessage (':':' ':s) = Message Nothing
-    $> (head.words) s
-    $> (ircParams.unwords.tail.words) s
+    $> head w
+    $> ircParams (unwords (tail w))
+  where w = words s
 parseMessage (':':s) = Message
-    $> Just (StringPrefix $ (head.words) s)
-    $> (head.tail.words) s
-    $> (ircParams.unwords.tail.tail.words) s
+    $> Just (StringPrefix (head w))
+    $> head (tail w)
+    $> (ircParams.unwords.tail.tail) w
+  where w = words s
 parseMessage s = Message Nothing
-    $> (head.words) s
-    $> (ircParams.unwords.tail.words) s
+    $> head w
+    $> ircParams (unwords (tail w))
+  where w = words s
