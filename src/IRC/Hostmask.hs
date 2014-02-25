@@ -19,7 +19,7 @@ data Hostmask = Hostmask
     { nick  :: String
     , user  :: String
     , host  :: String
-    }
+    } deriving (Eq)
 
 instance Show Hostmask where
     show (Hostmask n u h) = n ++ ('!':u) ++ ('@':h)

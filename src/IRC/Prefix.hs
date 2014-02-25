@@ -18,6 +18,8 @@ module IRC.Prefix where
 import IRC.Hostmask
 
 data Prefix = StringPrefix String | MaskPrefix Hostmask
+    deriving (Eq)
+
 instance Show Prefix where
     show (StringPrefix s)   = s
     show (MaskPrefix m)     = show m

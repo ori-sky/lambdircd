@@ -23,7 +23,7 @@ data Message = Message
     { prefix    :: Maybe Prefix
     , command   :: String
     , params    :: [String]
-    } deriving (Show)
+    } deriving (Show, Eq)
 
 ircParams :: String -> [String]
 ircParams "" = []
