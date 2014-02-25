@@ -36,10 +36,11 @@ parseMessage "" = Message Nothing "" []
 -- duplicate code to correctly handle commands beginning with colon
 parseMessage (':':' ':line) = Message Nothing command $ ircParams (unwords params)
   where command:params = words line
-parseMessage (':':line) = Message
-    $> Just (StringPrefix prefix)
-    $> command
-    $> ircParams (unwords params)
-  where (prefix:command:params) = words line
+parseMessage (':':line) = case xs of
+    (command:params)    -> msg command (ircParams (unwords params))
+    _                   -> msg "" []
+  where
+    prefix:xs = words line
+    msg = Message $ Just (StringPrefix prefix)
 parseMessage line = Message Nothing command $ ircParams (unwords params)
   where command:params = words line
