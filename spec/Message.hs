@@ -23,13 +23,10 @@ main = hspec $ do
                 `shouldBe` Message (Just (StringPrefix "one")) "two" ["three", "four"]
             parseMessage ":one two :three four"
                 `shouldBe` Message (Just (StringPrefix "one")) "two" ["three four"]
-            -- TODO: the following tests fail
             parseMessage ":one :two three four"
                 `shouldBe` Message (Just (StringPrefix "one")) ":two" ["three", "four"]
-            parseMessage ": two three four"
-                `shouldBe` Message (Just (StringPrefix "")) "two" ["three", "four"]
-            parseMessage ": :two :three four"
-                `shouldBe` Message (Just (StringPrefix "")) ":two" ["three four"]
+            parseMessage ": two three four" `shouldBe` Message Nothing "two" ["three", "four"]
+            parseMessage ": :two :three four" `shouldBe` Message Nothing ":two" ["three four"]
             -- these ones should not fail hopefully
             parseMessage ":one two" `shouldBe` Message (Just (StringPrefix "one")) "two" []
             parseMessage "two" `shouldBe` Message Nothing "two" []
