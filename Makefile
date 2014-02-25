@@ -14,3 +14,6 @@ clean:
 		src/**/*.o src/**/*.hi \
 		plugins/*.o \
 		plugins/*.hi
+
+test:
+	runhaskell -isrc spec/*.hs
