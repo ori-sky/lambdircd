@@ -16,7 +16,6 @@
 module IRC.Message where
 
 import Data.Char
-import LeftApplication
 import IRC.Prefix
 
 data Message = Message
