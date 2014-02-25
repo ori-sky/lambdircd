@@ -1,9 +1,22 @@
 import Test.Hspec
-import IRC.Message
+import IRC.Hostmask
 import IRC.Prefix
+import IRC.Message
 
 main :: IO ()
 main = hspec $ do
+    describe "IRC.Hostmask" $ do
+        it "can be represented as a string" $ do
+            show (Hostmask "nick" "user" "host")    `shouldBe` "nick!user@host"
+            show (Hostmask "nick" "user" "")        `shouldBe` "nick!user@"
+            show (Hostmask "nick" "" "")            `shouldBe` "nick!@"
+            show (Hostmask "" "" "")                `shouldBe` "!@"
+    describe "IRC.Prefix" $ do
+        it "can be represented as a string" $ do
+            show (StringPrefix "prefix") `shouldBe` "prefix"
+            show (StringPrefix "") `shouldBe` ""
+            show (MaskPrefix (Hostmask "nick" "user" "host")) `shouldBe` "nick!user@host"
+            show (MaskPrefix (Hostmask "" "" "")) `shouldBe` "!@"
     describe "IRC.Message" $ do
         it "parses IRC message parameters" $ do
             ircParams "one two three four" `shouldBe` ["one", "two", "three", "four"]
