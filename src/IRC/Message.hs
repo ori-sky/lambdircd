@@ -33,10 +33,14 @@ ircParams s = x : (ircParams $ drop 1 xs)
 
 parseMessage :: String -> Message
 parseMessage "" = Message Nothing "" []
+-- duplicate code to correctly handle commands beginning with colon
+parseMessage (':':' ':s) = Message Nothing
+    $> (head.words) s
+    $> (ircParams.unwords.tail.words) s
 parseMessage (':':s) = Message
     $> Just (StringPrefix $ (head.words) s)
-    $> (head.tail.ircParams) s
-    $> (tail.tail.ircParams) s
+    $> (head.tail.words) s
+    $> (ircParams.unwords.tail.tail.words) s
 parseMessage s = Message Nothing
-    $> (head.ircParams) s
-    $> (tail.ircParams) s
+    $> (head.words) s
+    $> (ircParams.unwords.tail.words) s
