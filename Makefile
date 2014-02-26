@@ -15,4 +15,4 @@ clean:
 	find src -name '*.hi' -print0 | xargs -0 rm -fv
 
 test:
-	runhaskell -isrc spec/*.hs
+	sh test.sh
