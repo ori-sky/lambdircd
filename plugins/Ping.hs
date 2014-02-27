@@ -13,30 +13,29 @@
  - limitations under the License.
  -}
 
-import IRC.Server as IRCD
-import IRC.Server.Options
-import IRC.Server.Environment
+module Ping where
 
-main :: IO ()
-main = serveIRC defaultEnv
-    { options = defaultOptions
-        { plugins =
-            [ "Ping"
-            , "Pong"
-            , "Nick"
-            , "User"
-            ]
-        , pingTimeout = 5
-        }
+import Data.Maybe
+import IRC.Message (Message(..))
+import IRC.Server.Client as Client (sendClient)
+import qualified IRC.Server.Client as Client (nick)
+import qualified IRC.Server.Environment as Env (client)
+import Plugin
+
+plugin = defaultPlugin
+    { handlers =
+        [ ("PING", ping)
+        ]
     }
 
-{-
-processMessage _ client (Message _ "PING"(server1:_)) = do
+ping :: CommandHandler
+ping env (Message _ _ (server1:_)) = do
     sendClient client $ ":lambdircd PONG lambdircd :" ++ server1
-    return client
-
-processMessage _ client (Message _ command _) = do
-    sendClient client $ ":lambdircd 421 " ++ nick' ++ (' ':command) ++ " :Unknown command"
-    return client
-  where nick' = fromMaybe "*" (Client.nick client)
--}
+    return env
+  where client = Env.client env
+ping env _ = do
+    sendClient client $ ":lambdircd 461 " ++ nick ++ " PING :Not enough parameters"
+    return env
+  where
+    client = Env.client env
+    nick = fromMaybe "*" (Client.nick client)
