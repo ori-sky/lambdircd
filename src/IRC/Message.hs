@@ -41,5 +41,5 @@ parseMessage (':':xs)
     msg = parseMessage rest
 parseMessage (' ':':':xs) = parseMessage xs
 parseMessage (' ':xs) = parseMessage xs
-parseMessage line = Message Nothing command $ ircParams (unwords params)
+parseMessage line = Message Nothing (map toUpper command) $ ircParams (unwords params)
   where command:params = words line
