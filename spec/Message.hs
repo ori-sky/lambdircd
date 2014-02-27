@@ -30,18 +30,18 @@ main = hspec $ do
             ircParams ":" `shouldBe` [""]
             ircParams "" `shouldBe` []
         it "parses IRC messages" $ do
-            parseMessage "one two three four" `shouldBe` Message Nothing "one" ["two", "three", "four"]
-            parseMessage "one two :three four" `shouldBe` Message Nothing "one" ["two", "three four"]
+            parseMessage "one two three four" `shouldBe` Message Nothing "ONE" ["two", "three", "four"]
+            parseMessage "one two :three four" `shouldBe` Message Nothing "ONE" ["two", "three four"]
             parseMessage ":one two three four"
-                `shouldBe` Message (Just (StringPrefix "one")) "two" ["three", "four"]
+                `shouldBe` Message (Just (StringPrefix "one")) "TWO" ["three", "four"]
             parseMessage ":one two :three four"
-                `shouldBe` Message (Just (StringPrefix "one")) "two" ["three four"]
+                `shouldBe` Message (Just (StringPrefix "one")) "TWO" ["three four"]
             parseMessage ":one :two three four"
-                `shouldBe` Message (Just (StringPrefix "one")) "two" ["three", "four"]
-            parseMessage ": two three four" `shouldBe` Message Nothing "two" ["three", "four"]
-            parseMessage ": :two :three four" `shouldBe` Message Nothing "two" ["three four"]
-            parseMessage ":one two" `shouldBe` Message (Just (StringPrefix "one")) "two" []
-            parseMessage "two" `shouldBe` Message Nothing "two" []
+                `shouldBe` Message (Just (StringPrefix "one")) "TWO" ["three", "four"]
+            parseMessage ": two three four" `shouldBe` Message Nothing "TWO" ["three", "four"]
+            parseMessage ": :two :three four" `shouldBe` Message Nothing "TWO" ["three four"]
+            parseMessage ":one two" `shouldBe` Message (Just (StringPrefix "one")) "TWO" []
+            parseMessage "two" `shouldBe` Message Nothing "TWO" []
             parseMessage ":one" `shouldBe` Message (Just (StringPrefix "one")) "" []
             parseMessage "" `shouldBe` Message Nothing "" []
             parseMessage ":" `shouldBe` Message Nothing "" []
