@@ -47,8 +47,8 @@ serveIRC baseEnv = do
                     Client.sendClient client $ ":lambdircd 001 "++nick++" :Welcome to lambdircd "++nick
                     loopClient (newEnv {Env.client=client}) False
                   where
-                    client = Env.client env
-                    Just nick = Client.nick client
+                    client = Env.client newEnv
+                    nick = fromMaybe "*" (Client.nick client)
                 _ -> return ()
         )
   where
@@ -67,9 +67,10 @@ registerClient env = do
     case M.lookup (command msg) (Env.handlers env) of
         Just handler -> do
             newEnv <- handler env msg
+            print (Env.client newEnv)
             case Client.isClientRegistered (Env.client newEnv) of
                 True    -> return newEnv
-                False   -> registerClient env
+                False   -> registerClient newEnv
         Nothing -> do
             putStrLn $ "no handler for `"++(command msg)++"`"
             registerClient env
@@ -77,7 +78,7 @@ registerClient env = do
 
 loopClient :: Env.Env -> Bool -> IO ()
 loopClient env pinged = do
-    maybeEnv <- timeout pingTimeout (handleLine env)
+    maybeEnv <- timeout (toMicro pingTimeout) (handleLine env)
     case maybeEnv of
         Just newEnv -> loopClient newEnv False
         Nothing     -> case pinged of
