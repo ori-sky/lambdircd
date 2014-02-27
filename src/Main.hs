@@ -30,40 +30,6 @@ main = serveIRC defaultEnv
     }
 
 {-
-handleMessage :: MessageHandler
-handleMessage opts client message = do
-    putStrLn $ show message
-    processMessage opts client message
-
-processMessage :: MessageHandler
-
-processMessage _ client (Message _ "NICK" (nick:_))
-    | isClientRegistered client = do
-        sendClient client $ (':':nick') ++ " NICK :" ++ nick
-        return client {Client.nick=Just nick}
-    | otherwise = return client {Client.nick=Just nick}
-  where Just nick' = Client.nick client
-processMessage _ client (Message _ "NICK" _) = do
-    sendClient client $ ":lambdircd 431 " ++ nick' ++ " :No nickname given"
-    return client
-  where nick' = fromMaybe "*" (Client.nick client)
-
-processMessage _ client (Message _ "USER" (user:_:_:realname:_))
-    | isClientRegistered client = do
-        sendClient client $ ":lambdircd 462 " ++ nick' ++ " :You may not reregister"
-        return client
-    | otherwise = return client {Client.user=Just user, realName=Just realname}
-  where Just nick' = Client.nick client
-processMessage _ client (Message _ "USER" _)
-    | isClientRegistered client = do
-        sendClient client $ ":lambdircd 462 " ++ nick' ++ " :You may not reregister"
-        return client
-    | otherwise = do
-        sendClient client $ ":lambdircd 461 " ++ nick' ++ " USER :Not enough parameters"
-        return client
-  where nick' = fromMaybe "*" (Client.nick client)
-
---processMessage _ client (Message _ "PONG" _) = return client
 processMessage _ client (Message _ "PING"(server1:_)) = do
     sendClient client $ ":lambdircd PONG lambdircd :" ++ server1
     return client
