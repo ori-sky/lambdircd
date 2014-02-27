@@ -20,7 +20,11 @@ import IRC.Server.Environment
 main :: IO ()
 main = serveIRC defaultEnv
     { options = defaultOptions
-        { plugins = ["Pong"]
+        { plugins =
+            [ "Pong"
+            , "Nick"
+            , "User"
+            ]
         , pingTimeout = 5
         }
     }
