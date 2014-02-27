@@ -23,8 +23,9 @@ import System.IO
 import System.Timeout
 import Network.SocketServer
 import IRC.Message
-import qualified IRC.Server.Options as Opts
+import IRC.Server.Client (isClientRegistered, sendClient)
 import qualified IRC.Server.Client as Client
+import qualified IRC.Server.Options as Opts
 import qualified IRC.Server.Environment as Env
 import qualified Plugin as P
 import Plugin.Load
@@ -44,7 +45,7 @@ serveIRC baseEnv = do
                 $ registerClient env {Env.client=Client.defaultClient {Client.handle=Just handle}}
             case maybeEnv of
                 Just newEnv -> do
-                    Client.sendClient client $ ":lambdircd 001 "++nick++" :Welcome to lambdircd "++nick
+                    sendClient client $ ":lambdircd 001 "++nick++" :Welcome to lambdircd "++nick
                     loopClient (newEnv {Env.client=client}) False
                   where
                     client = Env.client newEnv
@@ -67,12 +68,10 @@ registerClient env = do
     case M.lookup (command msg) (Env.handlers env) of
         Just handler -> do
             newEnv <- handler env msg
-            case Client.isClientRegistered (Env.client newEnv) of
+            case isClientRegistered (Env.client newEnv) of
                 True    -> return newEnv
                 False   -> registerClient newEnv
-        Nothing -> do
-            putStrLn $ "no handler for `"++(command msg)++"`"
-            registerClient env
+        Nothing -> registerClient env
   where Just handle = Client.handle (Env.client env)
 
 loopClient :: Env.Env -> Bool -> IO ()
@@ -82,7 +81,7 @@ loopClient env pinged = do
         Just newEnv -> loopClient newEnv False
         Nothing     -> case pinged of
             True        -> return ()
-            False       -> Client.sendClient client "PING :lambdircd"
+            False       -> sendClient client "PING :lambdircd"
                             >> loopClient env True
   where
     pingTimeout = Opts.pingTimeout (Env.options env)
@@ -95,9 +94,12 @@ handleLine env = do
     case M.lookup (command msg) (Env.handlers env) of
         Just handler -> handler env msg
         Nothing -> do
-            putStrLn $ "no handler for `"++(command msg)++"`"
+            sendClient client $ ":lambdircd 431 " ++ nick ++ (' ':(command msg)) ++ " :Unknown command"
             handleLine env
-  where Just handle = Client.handle (Env.client env)
+  where
+    client = Env.client env
+    Just handle = Client.handle client
+    nick = fromMaybe "*" (Client.nick client)
 
 toMicro :: Num a => a -> a
 toMicro = (*1000000)
