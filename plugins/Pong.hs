@@ -18,3 +18,12 @@ module Pong where
 import Plugin
 
 plugin = defaultPlugin
+    { handlers =
+        [ ("PONG", pong)
+        ]
+    }
+
+pong :: CommandHandler
+pong env _ = do
+    putStrLn "PONG RECEIVED!"
+    return env

@@ -13,20 +13,18 @@
  - limitations under the License.
  -}
 
-import Data.Maybe
-import IRC.Message
 import IRC.Server as IRCD
 import IRC.Server.Options
-import IRC.Server.Client as Client
-import IRC.Server.MessageHandler
+import IRC.Server.Environment
 
 main :: IO ()
-main = serveIRC defaultOptions {pingTimeout=5}
-    { plugins   =
-        [ "Pong"
-        ]
-    } handleMessage
+main = serveIRC defaultEnv
+    { options = defaultOptions
+        { plugins = ["Pong"]
+        }
+    }
 
+{-
 handleMessage :: MessageHandler
 handleMessage opts client message = do
     putStrLn $ show message
@@ -69,3 +67,4 @@ processMessage _ client (Message _ command _) = do
     sendClient client $ ":lambdircd 421 " ++ nick' ++ (' ':command) ++ " :Unknown command"
     return client
   where nick' = fromMaybe "*" (Client.nick client)
+-}

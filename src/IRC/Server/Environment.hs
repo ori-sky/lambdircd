@@ -13,23 +13,22 @@
  - limitations under the License.
  -}
 
-{-# LANGUAGE RankNTypes #-}
+module IRC.Server.Environment where
 
-module Plugin where
-
+import qualified Data.Map as M
 import IRC.Message (Message(..))
-import qualified IRC.Server.Environment as Env (Env(..))
+import IRC.Server.Client
+import qualified IRC.Server.Options as Opts
 
-type CommandHandler = Env.Env -> Message -> IO Env.Env
-
-data Interface = Interface
-    { isPlugin  :: Bool
-    , name      :: String
-    , handlers  :: [(String, CommandHandler)]
+data Env = Env
+    { options   :: Opts.Options
+    , client    :: Client
+    , handlers  :: M.Map String (Env -> Message -> IO Env)
     }
 
-defaultPlugin = Interface
-    { isPlugin  = True
-    , name      = ""
-    , handlers  = []
+defaultEnv :: Env
+defaultEnv = Env
+    { options   = Opts.defaultOptions
+    , client    = defaultClient
+    , handlers  = M.empty
     }

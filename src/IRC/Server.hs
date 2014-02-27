@@ -18,54 +18,66 @@ module IRC.Server
 ) where
 
 import Data.Maybe
+import qualified Data.Map as M
 import System.IO
 import System.Timeout
 import Network.SocketServer
-import LeftApplication
 import IRC.Message
-import IRC.Server.Options
-import IRC.Server.Client
-import IRC.Server.MessageHandler
+import qualified IRC.Server.Options as Opts
+import qualified IRC.Server.Client as Client
+import qualified IRC.Server.Environment as Env
+import qualified Plugin as P
 import Plugin.Load
 
-toMicro :: Num a => a -> a
-toMicro = (*1000000)
+serveIRC :: Env.Env -> IO ()
+serveIRC baseEnv = do
+    plugins <- mapM loadPlugin pluginNames
+    let handlers = M.unions $ map (M.fromList.P.handlers) (catMaybes plugins)
+    let env = baseEnv {Env.handlers=handlers}
 
---serveIRC :: Env -> IO ()
---serveIRC env = do
---    plugins <- mapM loadPlugin $ plugins (opts env)
-
-serveIRC :: Options -> MessageHandler -> IO ()
-serveIRC opts f = do
-    plugins <- mapM loadPlugin (plugins opts)
-    putStrLn $ show (length $ catMaybes plugins)
-    serveTCPforever
-        $> (simpleTCPOptions (port opts)) {reuse = True}
-        $> (threadedHandler . handleHandler) (\handle _ _ -> do
+    serveTCPforever ((simpleTCPOptions port) {reuse=True})
+        $ (threadedHandler.handleHandler) (\handle _ _ -> do
             hSetBuffering handle NoBuffering
             hSetNewlineMode handle universalNewlineMode
             hSetEncoding handle utf8
-            maybeClient <- timeout
-                $> toMicro (connectTimeout opts)
-                $> registerClient opts f (defaultClient {handle = Just handle})
-            case maybeClient of
-                Nothing         -> return ()
-                Just client'    -> do
-                    sendClient client' $ ":lambdircd 001 " ++ nick
-                        ++ " :Welcome to the lambdircd Internet Relay Network " ++ nick
-                    loopClient opts f client' False
-                  where Just nick = IRC.Server.Client.nick client'
+            maybeEnv <- timeout (toMicro connectTimeout)
+                $ registerClient env {Env.client=Client.defaultClient {Client.handle=Just handle}}
+            case maybeEnv of
+                Just newEnv -> do
+                    Client.sendClient client $ ":lambdircd 001 "++nick++" :Welcome to lambdircd "++nick
+                    --loopClient (env {Env.client=client}) False
+                    return ()
+                  where
+                    client = Env.client env
+                    Just nick = Client.nick client
+                _ -> return ()
         )
+  where
+    Env.Env
+        { Env.options = Opts.Options
+            { Opts.plugins = pluginNames
+            , Opts.port = port
+            , Opts.connectTimeout = connectTimeout
+            }
+        } = baseEnv
 
-registerClient :: Options -> MessageHandler -> Client -> IO Client
-registerClient opts f client = do
-    line <- hGetLine handle'
-    newClient <- f opts client (parseMessage line)
-    case isClientRegistered newClient of
-        True    -> return newClient
-        False   -> registerClient opts f newClient
-  where Just handle' = handle client
+registerClient :: Env.Env -> IO Env.Env
+registerClient env = do
+    line <- hGetLine handle
+    let msg = parseMessage line
+    case M.lookup (command msg) (Env.handlers env) of
+        Just handler -> do
+            newEnv <- handler env msg
+            case Client.isClientRegistered (Env.client newEnv) of
+                True    -> return newEnv
+                False   -> registerClient env
+        Nothing -> do
+            putStrLn $ "no handler for `"++(command msg)++"`"
+            registerClient env
+  where
+    Just handle = Client.handle (Env.client env)
 
+{-
 loopClient :: Options -> MessageHandler -> Client -> Bool -> IO ()
 loopClient opts f client pinged = do
     maybeClient <- timeout
@@ -83,3 +95,7 @@ handleLine opts f client = do
     line <- hGetLine handle'
     f opts client (parseMessage line)
   where Just handle' = handle client
+-}
+
+toMicro :: Num a => a -> a
+toMicro = (*1000000)
