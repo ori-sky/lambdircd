@@ -24,6 +24,4 @@ plugin = defaultPlugin
     }
 
 pong :: CommandHandler
-pong env _ = do
-    putStrLn "PONG RECEIVED!"
-    return env
+pong env _ = return env
