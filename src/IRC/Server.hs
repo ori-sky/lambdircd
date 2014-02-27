@@ -45,8 +45,7 @@ serveIRC baseEnv = do
             case maybeEnv of
                 Just newEnv -> do
                     Client.sendClient client $ ":lambdircd 001 "++nick++" :Welcome to lambdircd "++nick
-                    --loopClient (env {Env.client=client}) False
-                    return ()
+                    loopClient (newEnv {Env.client=client}) False
                   where
                     client = Env.client env
                     Just nick = Client.nick client
@@ -74,28 +73,31 @@ registerClient env = do
         Nothing -> do
             putStrLn $ "no handler for `"++(command msg)++"`"
             registerClient env
+  where Just handle = Client.handle (Env.client env)
+
+loopClient :: Env.Env -> Bool -> IO ()
+loopClient env pinged = do
+    maybeEnv <- timeout pingTimeout (handleLine env)
+    case maybeEnv of
+        Just newEnv -> loopClient newEnv False
+        Nothing     -> case pinged of
+            True        -> return ()
+            False       -> Client.sendClient client "PING :lambdircd"
+                            >> loopClient env True
   where
-    Just handle = Client.handle (Env.client env)
+    pingTimeout = Opts.pingTimeout (Env.options env)
+    client = Env.client env
 
-{-
-loopClient :: Options -> MessageHandler -> Client -> Bool -> IO ()
-loopClient opts f client pinged = do
-    maybeClient <- timeout
-        $> toMicro (pingTimeout opts)
-        $> handleLine opts f client
-    case maybeClient of
-        Nothing         -> case pinged of
-            True            -> return ()
-            False           -> sendClient client "PING :lambdaircd"
-                               >> loopClient opts f client True
-        Just client'    -> loopClient opts f client' False
-
-handleLine :: Options -> MessageHandler -> Client -> IO Client
-handleLine opts f client = do
-    line <- hGetLine handle'
-    f opts client (parseMessage line)
-  where Just handle' = handle client
--}
+handleLine :: Env.Env -> IO Env.Env
+handleLine env = do
+    line <- hGetLine handle
+    let msg = parseMessage line
+    case M.lookup (command msg) (Env.handlers env) of
+        Just handler -> handler env msg
+        Nothing -> do
+            putStrLn $ "no handler for `"++(command msg)++"`"
+            handleLine env
+  where Just handle = Client.handle (Env.client env)
 
 toMicro :: Num a => a -> a
 toMicro = (*1000000)

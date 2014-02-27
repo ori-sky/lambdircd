@@ -21,6 +21,7 @@ main :: IO ()
 main = serveIRC defaultEnv
     { options = defaultOptions
         { plugins = ["Pong"]
+        , pingTimeout = 5
         }
     }
 
