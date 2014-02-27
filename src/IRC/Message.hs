@@ -32,6 +32,7 @@ ircParams s = x : (ircParams $ drop 1 xs)
 
 parseMessage :: String -> Message
 parseMessage "" = Message Nothing "" []
+parseMessage ":" = parseMessage ""
 -- duplicate code to correctly handle commands beginning with colon
 parseMessage (':':' ':line) = Message Nothing command $ ircParams (unwords params)
   where command:params = words line
