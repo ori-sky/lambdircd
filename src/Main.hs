@@ -26,17 +26,6 @@ main = serveIRC defaultEnv
             , "Nick"
             , "User"
             ]
-        , pingTimeout = 5
+        , pingTimeout = 50
         }
     }
-
-{-
-processMessage _ client (Message _ "PING"(server1:_)) = do
-    sendClient client $ ":lambdircd PONG lambdircd :" ++ server1
-    return client
-
-processMessage _ client (Message _ command _) = do
-    sendClient client $ ":lambdircd 421 " ++ nick' ++ (' ':command) ++ " :Unknown command"
-    return client
-  where nick' = fromMaybe "*" (Client.nick client)
--}
