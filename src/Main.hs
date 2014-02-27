@@ -26,6 +26,5 @@ main = serveIRC defaultEnv
             , "Nick"
             , "User"
             ]
-        , pingTimeout = 50
         }
     }
