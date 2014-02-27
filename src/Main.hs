@@ -25,6 +25,8 @@ main = serveIRC defaultEnv
             , "Pong"
             , "Nick"
             , "User"
+            , "Join"
+            , "Privmsg"
             ]
         }
     }
