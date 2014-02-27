@@ -19,6 +19,7 @@ module IRC.Server
 
 import Data.Maybe
 import qualified Data.Map as M
+import Control.Concurrent.STM
 import System.IO
 import System.Timeout
 import Network.SocketServer
@@ -33,8 +34,9 @@ import Plugin.Load
 serveIRC :: Env.Env -> IO ()
 serveIRC baseEnv = do
     plugins <- mapM loadPlugin pluginNames
+    sharedT <- atomically $ newTVar Env.defaultShared
     let handlers = M.unions $ map (M.fromList.P.handlers) (catMaybes plugins)
-    let env = baseEnv {Env.handlers=handlers}
+    let env = baseEnv {Env.handlers=handlers, Env.shared=Just sharedT}
 
     serveTCPforever ((simpleTCPOptions port) {reuse=True})
         $ (threadedHandler.handleHandler) (\handle _ _ -> do
@@ -92,14 +94,20 @@ handleLine env = do
     line <- hGetLine handle
     let msg = parseMessage line
     case M.lookup (command msg) (Env.handlers env) of
-        Just handler -> handler env msg
+        Just handler -> do
+            let newEnv = handler env msg
+            atomically $ do
+                shared <- readTVar sharedT
+                writeTVar sharedT shared {Env.clients=M.insert nick client (Env.clients shared)}
+            newEnv
         Nothing -> do
             sendClient client $ ":lambdircd 431 " ++ nick ++ (' ':(command msg)) ++ " :Unknown command"
             handleLine env
   where
+    Just sharedT = Env.shared env
     client = Env.client env
     Just handle = Client.handle client
-    nick = fromMaybe "*" (Client.nick client)
+    Just nick = Client.nick client -- force thread crash if nick=Nothing which should never happen here
 
 toMicro :: Num a => a -> a
 toMicro = (*1000000)
