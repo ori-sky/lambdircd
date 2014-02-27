@@ -67,7 +67,6 @@ registerClient env = do
     case M.lookup (command msg) (Env.handlers env) of
         Just handler -> do
             newEnv <- handler env msg
-            print (Env.client newEnv)
             case Client.isClientRegistered (Env.client newEnv) of
                 True    -> return newEnv
                 False   -> registerClient newEnv
