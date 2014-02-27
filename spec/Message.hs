@@ -43,4 +43,5 @@ main = hspec $ do
             parseMessage ":one two" `shouldBe` Message (Just (StringPrefix "one")) "two" []
             parseMessage "two" `shouldBe` Message Nothing "two" []
             parseMessage ":one" `shouldBe` Message (Just (StringPrefix "one")) "" []
+            parseMessage ":" `shouldBe` Message Nothing "" []
             parseMessage "" `shouldBe` Message Nothing "" []
