@@ -23,6 +23,8 @@ import Control.Concurrent.STM
 import System.IO
 import System.IO.Error
 import System.Timeout
+import Network
+import Network.Socket hiding (accept)
 import Network.SocketServer
 import IRC.Message
 import IRC.Server.Client (isClientRegistered, sendClient)
@@ -32,6 +34,18 @@ import qualified IRC.Server.Environment as Env
 import qualified Plugin as P
 import Plugin.Load
 
+serveIRC2 :: Env.Env -> IO ()
+serveIRC2 env = withSocketsDo $ do
+    sock <- listenOn (PortNumber port)
+    setSocketOption sock ReuseAddr 1
+    acceptLoop env sock
+  where Env.Env {Env.options=Opts.Options {Opts.port=port}} = env
+
+acceptLoop :: Env.Env -> Socket -> IO ()
+acceptLoop env sock = do
+    (handle, hostname, _) <- accept sock
+    acceptLoop env sock
+
 serveIRC :: Env.Env -> IO ()
 serveIRC baseEnv = do
     plugins <- mapM loadPlugin pluginNames
@@ -39,7 +53,7 @@ serveIRC baseEnv = do
     let handlers = M.unions $ map (M.fromList.P.handlers) (catMaybes plugins)
     let env = baseEnv {Env.handlers=handlers, Env.shared=Just sharedT}
 
-    serveTCPforever ((simpleTCPOptions port) {reuse=True})
+    serveTCPforever ((simpleTCPOptions (fromIntegral port)) {reuse=True})
         $ (threadedHandler.handleHandler) (\handle _ _ -> do
             hSetBuffering handle NoBuffering
             hSetNewlineMode handle universalNewlineMode
@@ -68,7 +82,6 @@ serveIRC baseEnv = do
                 shared <- readTVar sharedT
                 let newClients = M.delete uid (Env.clients shared)
                 writeTVar sharedT shared {Env.clients=newClients}
-            putStrLn "connection closed"
         )
   where
     Env.Env

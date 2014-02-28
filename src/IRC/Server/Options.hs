@@ -15,8 +15,10 @@
 
 module IRC.Server.Options where
 
+import Network (PortNumber)
+
 data Options = Options
-    { port              :: Int
+    { port              :: PortNumber
     , connectTimeout    :: Int
     , pingTimeout       :: Int
     , plugins           :: [String]
