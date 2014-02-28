@@ -41,8 +41,12 @@ serveIRC env = withSocketsDo $ do
     let handlers = M.unions $ map (M.fromList.P.handlers) (catMaybes plugins)
     let newEnv = env {Env.handlers=handlers, Env.shared=Just sharedT}
 
-    sock <- listenOn (PortNumber port)
+    sock <- socket AF_INET Stream defaultProtocol
     setSocketOption sock ReuseAddr 1
+    setSocketOption sock (CustomSockOpt (6, 9)) 30
+    bindSocket sock (SockAddrInet port iNADDR_ANY)
+    listen sock 5
+
     acceptLoop newEnv sock
   where Env.Env {Env.options=Opts.Options {Opts.plugins=pluginNames, Opts.port=port}} = env
 
