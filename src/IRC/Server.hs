@@ -19,13 +19,13 @@ module IRC.Server
 
 import Data.Maybe
 import qualified Data.Map as M
+import Control.Concurrent (forkIO)
 import Control.Concurrent.STM
 import System.IO
 import System.IO.Error
 import System.Timeout
 import Network
 import Network.Socket hiding (accept)
-import Network.SocketServer
 import IRC.Message
 import IRC.Server.Client (isClientRegistered, sendClient)
 import qualified IRC.Server.Client as Client
@@ -34,63 +34,55 @@ import qualified IRC.Server.Environment as Env
 import qualified Plugin as P
 import Plugin.Load
 
-serveIRC2 :: Env.Env -> IO ()
-serveIRC2 env = withSocketsDo $ do
+serveIRC :: Env.Env -> IO ()
+serveIRC env = withSocketsDo $ do
+    plugins <- mapM loadPlugin pluginNames
+    sharedT <- atomically $ newTVar Env.defaultShared
+    let handlers = M.unions $ map (M.fromList.P.handlers) (catMaybes plugins)
+    let newEnv = env {Env.handlers=handlers, Env.shared=Just sharedT}
+
     sock <- listenOn (PortNumber port)
     setSocketOption sock ReuseAddr 1
-    acceptLoop env sock
-  where Env.Env {Env.options=Opts.Options {Opts.port=port}} = env
+    acceptLoop newEnv sock
+  where Env.Env {Env.options=Opts.Options {Opts.plugins=pluginNames, Opts.port=port}} = env
 
 acceptLoop :: Env.Env -> Socket -> IO ()
 acceptLoop env sock = do
     (handle, hostname, _) <- accept sock
+    hSetNewlineMode handle universalNewlineMode
+    hSetBuffering handle LineBuffering
+    hSetEncoding handle utf8
+
+    let newEnv = env {Env.client=Client.defaultClient {Client.handle=Just handle}}
+
+    forkIO (serveClient newEnv)
     acceptLoop env sock
 
-serveIRC :: Env.Env -> IO ()
-serveIRC baseEnv = do
-    plugins <- mapM loadPlugin pluginNames
-    sharedT <- atomically $ newTVar Env.defaultShared
-    let handlers = M.unions $ map (M.fromList.P.handlers) (catMaybes plugins)
-    let env = baseEnv {Env.handlers=handlers, Env.shared=Just sharedT}
+serveClient :: Env.Env -> IO ()
+serveClient env = do
+    shared <- atomically $ readTVar sharedT
+    let uid = if M.null (Env.clients shared) then 1
+        else fst (M.findMax (Env.clients shared)) + 1
 
-    serveTCPforever ((simpleTCPOptions (fromIntegral port)) {reuse=True})
-        $ (threadedHandler.handleHandler) (\handle _ _ -> do
-            hSetBuffering handle NoBuffering
-            hSetNewlineMode handle universalNewlineMode
-            hSetEncoding handle utf8
-
-            shared <- atomically $ readTVar sharedT
-            let uid = if M.null (Env.clients shared) then 1
-                else fst (M.findMax (Env.clients shared)) + 1
-
-            tryIOError $ do
-                maybeEnv <- timeout (toMicro connectTimeout) $ registerClient env
-                    { Env.client=Client.defaultClient
-                        { Client.handle = Just handle
-                        , Client.uid    = Just uid
-                        }
-                    }
-                case maybeEnv of
-                    Just newEnv -> do
-                        sendClient client $ ":lambdircd 001 "++nick++" :Welcome to lambdircd "++nick
-                        loopClient newEnv False
-                      where
-                        client = Env.client newEnv
-                        nick = fromMaybe "*" (Client.nick client)
-                    _ -> return ()
-            atomically $ do
-                shared <- readTVar sharedT
-                let newClients = M.delete uid (Env.clients shared)
-                writeTVar sharedT shared {Env.clients=newClients}
-        )
+    tryIOError $ do
+        maybeEnv <- timeout (toMicro connectTimeout) $ registerClient env
+            {Env.client=client {Client.uid=Just uid}}
+        case maybeEnv of
+            Just newEnv -> do
+                sendClient newClient $ ":lambdircd 001 "++nick++" :Welcome to lambdircd "++nick
+                loopClient newEnv False
+              where
+                newClient = Env.client newEnv
+                Just nick = Client.nick newClient
+            Nothing -> return ()
+    atomically $ do
+        shared <- readTVar sharedT
+        let newClients = M.delete uid (Env.clients shared)
+        writeTVar sharedT shared {Env.clients=newClients}
   where
-    Env.Env
-        { Env.options = Opts.Options
-            { Opts.plugins = pluginNames
-            , Opts.port = port
-            , Opts.connectTimeout = connectTimeout
-            }
-        } = baseEnv
+    Just sharedT = Env.shared env
+    client = Env.client env
+    Env.Env {Env.options=Opts.Options {Opts.connectTimeout=connectTimeout}} = env
 
 registerClient :: Env.Env -> IO Env.Env
 registerClient env = do
