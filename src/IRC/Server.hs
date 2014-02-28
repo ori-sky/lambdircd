@@ -47,11 +47,11 @@ serveIRC env = withSocketsDo $ do
     bindSocket sock (SockAddrInet port iNADDR_ANY)
     listen sock 5
 
-    acceptLoop newEnv sock
+    acceptLoop sock newEnv
   where Env.Env {Env.options=Opts.Options {Opts.plugins=pluginNames, Opts.port=port}} = env
 
-acceptLoop :: Env.Env -> Socket -> IO ()
-acceptLoop env sock = do
+acceptLoop :: Socket -> Env.Env-> IO ()
+acceptLoop sock env = do
     (handle, hostname, _) <- accept sock
     hSetNewlineMode handle universalNewlineMode
     hSetBuffering handle LineBuffering
@@ -60,7 +60,7 @@ acceptLoop env sock = do
     let newEnv = env {Env.client=Client.defaultClient {Client.handle=Just handle}}
 
     forkIO (serveClient newEnv)
-    acceptLoop env sock
+    acceptLoop sock env
 
 serveClient :: Env.Env -> IO ()
 serveClient env = do
