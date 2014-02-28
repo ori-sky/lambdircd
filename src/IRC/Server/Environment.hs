@@ -22,7 +22,7 @@ import IRC.Server.Client
 import qualified IRC.Server.Options as Opts
 
 data Shared = Shared
-    { clients   :: M.Map String Client
+    { clients   :: M.Map Integer Client
     }
 
 defaultShared :: Shared

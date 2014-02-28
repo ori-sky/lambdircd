@@ -21,6 +21,7 @@ import Data.Maybe
 import qualified Data.Map as M
 import Control.Concurrent.STM
 import System.IO
+import System.IO.Error
 import System.Timeout
 import Network.SocketServer
 import IRC.Message
@@ -43,16 +44,31 @@ serveIRC baseEnv = do
             hSetBuffering handle NoBuffering
             hSetNewlineMode handle universalNewlineMode
             hSetEncoding handle utf8
-            maybeEnv <- timeout (toMicro connectTimeout)
-                $ registerClient env {Env.client=Client.defaultClient {Client.handle=Just handle}}
-            case maybeEnv of
-                Just newEnv -> do
-                    sendClient client $ ":lambdircd 001 "++nick++" :Welcome to lambdircd "++nick
-                    loopClient (newEnv {Env.client=client}) False
-                  where
-                    client = Env.client newEnv
-                    nick = fromMaybe "*" (Client.nick client)
-                _ -> return ()
+
+            shared <- atomically $ readTVar sharedT
+            let uid = if M.null (Env.clients shared) then 1
+                else fst (M.findMax (Env.clients shared)) + 1
+
+            tryIOError $ do
+                maybeEnv <- timeout (toMicro connectTimeout) $ registerClient env
+                    { Env.client=Client.defaultClient
+                        { Client.handle = Just handle
+                        , Client.uid    = Just uid
+                        }
+                    }
+                case maybeEnv of
+                    Just newEnv -> do
+                        sendClient client $ ":lambdircd 001 "++nick++" :Welcome to lambdircd "++nick
+                        loopClient newEnv False
+                      where
+                        client = Env.client newEnv
+                        nick = fromMaybe "*" (Client.nick client)
+                    _ -> return ()
+            atomically $ do
+                shared <- readTVar sharedT
+                let newClients = M.delete uid (Env.clients shared)
+                writeTVar sharedT shared {Env.clients=newClients}
+            putStrLn "connection closed"
         )
   where
     Env.Env
@@ -91,14 +107,15 @@ loopClient env pinged = do
 
 handleLine :: Env.Env -> IO Env.Env
 handleLine env = do
+    atomically $ do
+        shared <- readTVar sharedT
+        let newClients = M.insert uid client (Env.clients shared)
+        writeTVar sharedT shared {Env.clients=newClients}
     line <- hGetLine handle
     let msg = parseMessage line
     case M.lookup (command msg) (Env.handlers env) of
         Just handler -> do
             let newEnv = handler env msg
-            atomically $ do
-                shared <- readTVar sharedT
-                writeTVar sharedT shared {Env.clients=M.insert nick client (Env.clients shared)}
             newEnv
         Nothing -> do
             sendClient client $ ":lambdircd 431 " ++ nick ++ (' ':(command msg)) ++ " :Unknown command"
@@ -106,8 +123,10 @@ handleLine env = do
   where
     Just sharedT = Env.shared env
     client = Env.client env
+    Just uid = Client.uid client
     Just handle = Client.handle client
-    Just nick = Client.nick client -- force thread crash if nick=Nothing which should never happen here
+    Just nick = Client.nick client
+    -- force thread crash if Nothing which should never happen here
 
 toMicro :: Num a => a -> a
 toMicro = (*1000000)

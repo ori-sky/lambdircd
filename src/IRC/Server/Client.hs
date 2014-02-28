@@ -19,18 +19,20 @@ import Data.Maybe
 import System.IO
 
 data Client = Client
-    { handle      :: Maybe Handle
-    , nick        :: Maybe String
-    , user        :: Maybe String
-    , realName    :: Maybe String
+    { uid       :: Maybe Integer
+    , handle    :: Maybe Handle
+    , nick      :: Maybe String
+    , user      :: Maybe String
+    , realName  :: Maybe String
     } deriving (Show)
 
 defaultClient :: Client
 defaultClient = Client
-    { handle      = Nothing
-    , nick        = Nothing
-    , user        = Nothing
-    , realName    = Nothing
+    { uid       = Nothing
+    , handle    = Nothing
+    , nick      = Nothing
+    , user      = Nothing
+    , realName  = Nothing
     }
 
 isClientRegistered :: Client -> Bool
