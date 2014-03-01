@@ -16,7 +16,8 @@
 module Privmsg where
 
 import IRC.Message
-import IRC.Server.Client (isClientRegistered, sendClient)
+import IRC.Numeric
+import IRC.Server.Client (isClientRegistered)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
 import Plugin
@@ -38,17 +39,15 @@ privmsg env (Message _ _ (target:text:_))
     Just nick = Client.nick client
 privmsg env (Message _ _ (target:[]))
     | isClientRegistered client = do
-        sendClient client $ ":lambdircd 412 " ++ nick ++ " :No text to send"
+        sendNumeric env (Numeric 412) ["No text to send"]
         return env
     | otherwise = return env
   where
     client = Env.client env
-    Just nick = Client.nick client
 privmsg env _
     | isClientRegistered client = do
-        sendClient client $ ":lambdircd 411 " ++ nick ++ " :No recipient given (PRIVMSG)"
+        sendNumeric env (Numeric 411) ["No recipient given (PRIVMSG)"]
         return env
     | otherwise = return env
   where
     client = Env.client env
-    Just nick = Client.nick client

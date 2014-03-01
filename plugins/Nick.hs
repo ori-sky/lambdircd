@@ -15,8 +15,8 @@
 
 module Nick where
 
-import Data.Maybe
 import IRC.Message
+import IRC.Numeric
 import IRC.Server.Client (isClientRegistered, sendClient)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
@@ -38,8 +38,5 @@ nick env (Message _ _ (nick:_))
     client = Env.client env
     Just oldNick = Client.nick client
 nick env _ = do
-    sendClient client $ ":lambdircd 431 " ++ currNick ++ " :No nickname given"
+    sendNumeric env (Numeric 431) ["No nickname given"]
     return env
-  where
-    client = Env.client env
-    currNick = fromMaybe "*" (Client.nick client)

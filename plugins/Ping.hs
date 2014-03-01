@@ -15,10 +15,9 @@
 
 module Ping where
 
-import Data.Maybe
 import IRC.Message (Message(..))
+import IRC.Numeric
 import IRC.Server.Client as Client (sendClient)
-import qualified IRC.Server.Client as Client (nick)
 import qualified IRC.Server.Environment as Env (client)
 import Plugin
 
@@ -34,8 +33,6 @@ ping env (Message _ _ (server1:_)) = do
     return env
   where client = Env.client env
 ping env _ = do
-    sendClient client $ ":lambdircd 461 " ++ nick ++ " PING :Not enough parameters"
+    sendNumeric env (Numeric 461) ["PING", "Not enough parameters"]
     return env
   where
-    client = Env.client env
-    nick = fromMaybe "*" (Client.nick client)

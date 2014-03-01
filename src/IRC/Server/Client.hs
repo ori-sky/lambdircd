@@ -43,6 +43,5 @@ isClientRegistered client =
 
 sendClient :: Client -> String -> IO ()
 sendClient client message = do
-    putStrLn $ "-> " ++ message
     hPutStr handle' $ message ++ "\r\n"
   where Just handle' = handle client

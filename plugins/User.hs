@@ -15,9 +15,9 @@
 
 module User where
 
-import Data.Maybe
 import IRC.Message
-import IRC.Server.Client (isClientRegistered, sendClient)
+import IRC.Numeric
+import IRC.Server.Client (isClientRegistered)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
 import Plugin
@@ -31,19 +31,17 @@ plugin = defaultPlugin
 user :: CommandHandler
 user env (Message _ _ (user:_:_:realname:_))
     | isClientRegistered client = do
-        sendClient client $ ":lambdircd 462 " ++ nick ++ " :You may not reregister"
+        sendNumeric env (Numeric 462) ["You may not reregister"]
         return env
     | otherwise = return env {Env.client=client {Client.user=Just user, Client.realName=Just realname}}
   where
     client = Env.client env
-    Just nick = Client.nick client
 user env _
     | isClientRegistered client = do
-        sendClient client $ ":lambdircd 462 " ++ nick ++ " :You may not reregister"
+        sendNumeric env (Numeric 462) ["You may not reregister"]
         return env
     | otherwise = do
-        sendClient client $ ":lambdircd 461 " ++ nick ++ " USER :Not enough parameters"
+        sendNumeric env (Numeric 462) ["USER", "Not enough parameters"]
         return env
   where
     client = Env.client env
-    nick = fromMaybe "*" (Client.nick client)

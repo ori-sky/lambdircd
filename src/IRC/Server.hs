@@ -24,10 +24,11 @@ import Control.Concurrent.STM
 import System.IO
 import System.IO.Error
 import System.Timeout
-import Network
-import Network.Socket hiding (accept)
+import Network hiding (accept)
+import Network.Socket
 import IRC.Message
-import IRC.Server.Client (isClientRegistered, sendClient)
+import IRC.Numeric
+import IRC.Server.Client (defaultClient, isClientRegistered, sendClient)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Options as Opts
 import qualified IRC.Server.Environment as Env
@@ -53,13 +54,18 @@ serveIRC env = withSocketsDo $ do
 acceptLoop :: Socket -> Env.Env-> IO ()
 acceptLoop sock env = do
     tryIOError $ do
-        (handle, hostname, _) <- accept sock
+        (clientSock, sockAddr) <- accept sock
+        handle <- socketToHandle clientSock ReadWriteMode
         hSetNewlineMode handle universalNewlineMode
         hSetBuffering handle LineBuffering
         hSetEncoding handle utf8
-        let newEnv = env {Env.client=Client.defaultClient {Client.handle=Just handle}}
-        forkIO (serveClient newEnv)
+        let client = defaultClient {Client.handle=Just handle}
+        let newEnv = env {Env.client=client}
 
+        sendClient client ":lambdircd NOTICE * :*** Looking up your hostname..."
+        (Just hostName, Nothing) <- getNameInfo [] True False sockAddr
+        sendClient client ":lambdircd NOTICE * :*** Found your hostname"
+        forkIO (serveClient newEnv)
     acceptLoop sock env
 
 serveClient :: Env.Env -> IO ()
@@ -73,7 +79,8 @@ serveClient env = do
             {Env.client=client {Client.uid=Just uid}}
         case maybeEnv of
             Just newEnv -> do
-                sendClient newClient $ ":lambdircd 001 "++nick++" :Welcome to lambdircd "++nick
+                sendNumeric newEnv (Numeric 1) ["Welcome to lambdircd " ++ nick]
+                sendNumeric newEnv (Numeric 2) ["Your host is just.nothing[0.0.0.0/6667], running lambdircd"]
                 loopClient newEnv False
               where
                 newClient = Env.client newEnv
@@ -129,7 +136,7 @@ handleLine env = do
             let newEnv = handler env msg
             newEnv
         Nothing -> do
-            sendClient client $ ":lambdircd 431 " ++ nick ++ (' ':(command msg)) ++ " :Unknown command"
+            sendNumeric env (Numeric 431) [command msg, "Unknown command"]
             handleLine env
   where
     Just sharedT = Env.shared env

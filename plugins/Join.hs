@@ -16,6 +16,7 @@
 module Join where
 
 import IRC.Message
+import IRC.Numeric
 import IRC.Server.Client (isClientRegistered, sendClient)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
@@ -38,9 +39,8 @@ join env (Message _ _ (chan:_))
     Just nick = Client.nick client
 join env _
     | isClientRegistered client = do
-        sendClient client $ ":lambdircd 460 " ++ nick ++ " JOIN :Not enough parameters"
+        sendNumeric env (Numeric 460) ["JOIN", "Not enough parameters"]
         return env
     | otherwise = return env
   where
     client = Env.client env
-    Just nick = Client.nick client
