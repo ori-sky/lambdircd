@@ -52,14 +52,14 @@ serveIRC env = withSocketsDo $ do
 
 acceptLoop :: Socket -> Env.Env-> IO ()
 acceptLoop sock env = do
-    (handle, hostname, _) <- accept sock
-    hSetNewlineMode handle universalNewlineMode
-    hSetBuffering handle LineBuffering
-    hSetEncoding handle utf8
+    tryIOError $ do
+        (handle, hostname, _) <- accept sock
+        hSetNewlineMode handle universalNewlineMode
+        hSetBuffering handle LineBuffering
+        hSetEncoding handle utf8
+        let newEnv = env {Env.client=Client.defaultClient {Client.handle=Just handle}}
+        forkIO (serveClient newEnv)
 
-    let newEnv = env {Env.client=Client.defaultClient {Client.handle=Just handle}}
-
-    forkIO (serveClient newEnv)
     acceptLoop sock env
 
 serveClient :: Env.Env -> IO ()
@@ -83,9 +83,11 @@ serveClient env = do
         shared <- readTVar sharedT
         let newClients = M.delete uid (Env.clients shared)
         writeTVar sharedT shared {Env.clients=newClients}
+    hClose handle
   where
     Just sharedT = Env.shared env
     client = Env.client env
+    Just handle = Client.handle client
     Env.Env {Env.options=Opts.Options {Opts.connectTimeout=connectTimeout}} = env
 
 registerClient :: Env.Env -> IO Env.Env
