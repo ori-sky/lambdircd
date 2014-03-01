@@ -81,6 +81,10 @@ serveClient env = do
             Just newEnv -> do
                 sendNumeric newEnv (Numeric 1) ["Welcome to lambdircd " ++ nick]
                 sendNumeric newEnv (Numeric 2) ["Your host is just.nothing[0.0.0.0/6667], running lambdircd"]
+                sendNumeric newEnv (Numeric 3) ["This server was created (Just now)"]
+                sendNumeric newEnv (Numeric 375) ["- lambdircd Message of the Day -"]
+                sendNumeric newEnv (Numeric 372) ["- Welcome to lambdircd"]
+                sendNumeric newEnv (Numeric 376) ["End of /MOTD command"]
                 loopClient newEnv False
               where
                 newClient = Env.client newEnv
@@ -143,7 +147,6 @@ handleLine env = do
     client = Env.client env
     Just uid = Client.uid client
     Just handle = Client.handle client
-    Just nick = Client.nick client
     -- force thread crash if Nothing which should never happen here
 
 toMicro :: Num a => a -> a
