@@ -45,7 +45,10 @@ serveIRC env = withSocketsDo $ do
 
     sock <- socket AF_INET Stream defaultProtocol
     setSocketOption sock ReuseAddr 1
-    setSocketOption sock (CustomSockOpt (6, 9)) 30
+    {- 6 = TCP option, 9 = defer accept
+     - only supported on GNU systems
+     -}
+    tryIOError $ setSocketOption sock (CustomSockOpt (6, 9)) 30
     bindSocket sock (SockAddrInet port iNADDR_ANY)
     listen sock 5
 
