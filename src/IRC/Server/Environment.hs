@@ -16,18 +16,19 @@
 module IRC.Server.Environment where
 
 import qualified Data.Map as M
+import qualified Data.IntMap as IM
 import Control.Concurrent.STM
 import IRC.Message (Message(..))
 import IRC.Server.Client
 import qualified IRC.Server.Options as Opts
 
 data Shared = Shared
-    { clients   :: M.Map Integer Client
+    { clients   :: IM.IntMap Client
     }
 
 defaultShared :: Shared
 defaultShared = Shared
-    { clients   = M.empty
+    { clients   = IM.empty
     }
 
 data Env = Env

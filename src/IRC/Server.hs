@@ -19,6 +19,7 @@ module IRC.Server
 
 import Data.Maybe
 import qualified Data.Map as M
+import qualified Data.IntMap as IM
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM
 import System.IO
@@ -72,8 +73,8 @@ serveClient env sockAddr = do
     sendClient client ":lambdircd NOTICE * :*** Found your hostname"
 
     shared <- atomically $ readTVar sharedT
-    let uid = if M.null (Env.clients shared) then 1
-        else fst (M.findMax (Env.clients shared)) + 1
+    let uid = if IM.null (Env.clients shared) then 1
+        else fst (IM.findMax (Env.clients shared)) + 1
 
     tryIOError $ do
         maybeEnv <- timeout (toMicro connectTimeout) $ registerClient env
@@ -93,7 +94,7 @@ serveClient env sockAddr = do
             Nothing -> return ()
     atomically $ do
         shared <- readTVar sharedT
-        let newClients = M.delete uid (Env.clients shared)
+        let newClients = IM.delete uid (Env.clients shared)
         writeTVar sharedT shared {Env.clients=newClients}
     tryIOError $ hClose handle
     return ()
@@ -133,7 +134,7 @@ handleLine :: Env.Env -> IO Env.Env
 handleLine env = do
     atomically $ do
         shared <- readTVar sharedT
-        let newClients = M.insert uid client (Env.clients shared)
+        let newClients = IM.insert uid client (Env.clients shared)
         writeTVar sharedT shared {Env.clients=newClients}
     line <- hGetLine handle
     let msg = parseMessage line

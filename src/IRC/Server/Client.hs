@@ -19,7 +19,7 @@ import Data.Maybe
 import System.IO
 
 data Client = Client
-    { uid       :: Maybe Integer
+    { uid       :: Maybe Int
     , handle    :: Maybe Handle
     , nick      :: Maybe String
     , user      :: Maybe String
