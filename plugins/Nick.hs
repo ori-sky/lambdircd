@@ -15,6 +15,10 @@
 
 module Nick where
 
+import Data.Char (toUpper)
+import Data.Maybe (fromMaybe)
+import qualified Data.IntMap as IM
+import Control.Concurrent.STM
 import IRC.Message
 import IRC.Numeric
 import IRC.Server.Client (isClientRegistered, sendClient)
@@ -32,11 +36,26 @@ nick :: CommandHandler
 nick env (Message _ _ (nick:_))
     | isClientRegistered client = do
         sendClient client $ (':':oldNick) ++ " NICK :" ++ nick
-        return env {Env.client=client {Client.nick=Just nick}}
-    | otherwise = return env {Env.client=client {Client.nick=Just nick}}
+        changeNick env nick
+    | otherwise = changeNick env nick
   where
     client = Env.client env
     Just oldNick = Client.nick client
 nick env _ = do
     sendNumeric env (Numeric 431) ["No nickname given"]
     return env
+
+changeNick :: Env.Env -> String -> IO Env.Env
+changeNick env newNick = do
+    shared <- atomically $ readTVar sharedT
+    let pred = (\c ->
+            map toUpper (fromMaybe "*" (Client.nick c)) == map toUpper newNick
+               )
+    case IM.null (IM.filter pred (Env.clients shared)) of
+        True    -> return env {Env.client=client {Client.nick=Just newNick}}
+        False   -> do
+            sendNumeric env (Numeric 433) [newNick, "Nickname is already in use"]
+            return env
+  where
+    Just sharedT = Env.shared env
+    client = Env.client env

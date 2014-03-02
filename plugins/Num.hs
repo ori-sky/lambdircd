@@ -13,21 +13,25 @@
  - limitations under the License.
  -}
 
-import IRC.Server as IRCD
-import IRC.Server.Options
-import IRC.Server.Environment
+module Num where
 
-main :: IO ()
-main = serveIRC defaultEnv
-    { options = defaultOptions
-        { plugins =
-            [ "Ping"
-            , "Pong"
-            , "Nick"
-            , "User"
-            , "Join"
-            , "Privmsg"
-            , "Num"
-            ]
-        }
+import qualified Data.IntMap as IM
+import Control.Concurrent.STM
+import IRC.Server.Client (sendClient)
+import qualified IRC.Server.Environment as Env
+import Plugin
+
+plugin = defaultPlugin
+    { handlers =
+        [ ("NUM", num)
+        ]
     }
+
+num :: CommandHandler
+num env _ = do
+    shared <- atomically $ readTVar sharedT
+    sendClient client $ show (IM.size (Env.clients shared))
+    return env
+  where
+    Just sharedT = Env.shared env
+    client = Env.client env
