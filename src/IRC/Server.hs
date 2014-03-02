@@ -62,15 +62,15 @@ acceptLoop sock env = do
         let client = defaultClient {Client.handle=Just handle}
         let newEnv = env {Env.client=client}
 
-        sendClient client ":lambdircd NOTICE * :*** Looking up your hostname..."
-        --(Just hostName, Nothing) <- getNameInfo [] True False sockAddr
-        --sendClient client ":lambdircd NOTICE * :*** Found your hostname"
-        sendClient client ":lambdircd NOTICE * :*** Did not find your hostname"
-        forkIO (serveClient newEnv)
+        forkIO (serveClient newEnv sockAddr)
     acceptLoop sock env
 
-serveClient :: Env.Env -> IO ()
-serveClient env = do
+serveClient :: Env.Env -> SockAddr -> IO ()
+serveClient env sockAddr = do
+    sendClient client ":lambdircd NOTICE * :*** Looking up your hostname..."
+    (Just hostName, Nothing) <- getNameInfo [] True False sockAddr
+    sendClient client ":lambdircd NOTICE * :*** Found your hostname"
+
     shared <- atomically $ readTVar sharedT
     let uid = if M.null (Env.clients shared) then 1
         else fst (M.findMax (Env.clients shared)) + 1
