@@ -6,7 +6,7 @@ build-plugins:
 	ghc -W -O2 -isrc plugins/*.hs
 
 build-main:
-	ghc -W -O2 -isrc src/Main -o $(EXECUTABLE)
+	ghc -W -O2 -threaded -isrc src/Main -o $(EXECUTABLE)
 
 clean:
 	rm -fv $(EXECUTABLE)
