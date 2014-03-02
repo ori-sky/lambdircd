@@ -63,8 +63,9 @@ acceptLoop sock env = do
         let newEnv = env {Env.client=client}
 
         sendClient client ":lambdircd NOTICE * :*** Looking up your hostname..."
-        (Just hostName, Nothing) <- getNameInfo [] True False sockAddr
-        sendClient client ":lambdircd NOTICE * :*** Found your hostname"
+        --(Just hostName, Nothing) <- getNameInfo [] True False sockAddr
+        --sendClient client ":lambdircd NOTICE * :*** Found your hostname"
+        sendClient client ":lambdircd NOTICE * :*** Did not find your hostname"
         forkIO (serveClient newEnv)
     acceptLoop sock env
 
@@ -94,7 +95,8 @@ serveClient env = do
         shared <- readTVar sharedT
         let newClients = M.delete uid (Env.clients shared)
         writeTVar sharedT shared {Env.clients=newClients}
-    hClose handle
+    tryIOError $ hClose handle
+    return ()
   where
     Just sharedT = Env.shared env
     client = Env.client env
