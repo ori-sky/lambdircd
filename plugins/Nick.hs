@@ -16,6 +16,7 @@
 module Nick where
 
 import Data.Char (toUpper)
+import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
 import Control.Concurrent.STM
 import IRC.Message
@@ -47,11 +48,15 @@ nick env _ = do
 changeNick :: Env.Env -> String -> IO Env.Env
 changeNick env newNick = do
     shared <- atomically $ readTVar sharedT
-    case M.member (map toUpper newNick) (Env.uids shared) of
-        True    -> do
-            sendNumeric env (Numeric 433) [newNick, "Nickname is already in use"]
-            return env
-        False   -> return env {Env.client=client {Client.nick=Just newNick}}
+    case newNickUpper == map toUpper nick of
+        True    -> return env {Env.client=client {Client.nick=Just newNick}}
+        False   -> case M.member newNickUpper (Env.uids shared) of
+            True    -> do
+                sendNumeric env (Numeric 433) [newNick, "Nickname is already in use"]
+                return env
+            False   -> return env {Env.client=client {Client.nick=Just newNick}}
   where
+    newNickUpper = map toUpper newNick
     Just sharedT = Env.shared env
     client = Env.client env
+    nick = fromMaybe "*" (Client.nick client)
