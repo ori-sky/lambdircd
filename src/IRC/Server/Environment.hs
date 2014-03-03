@@ -24,11 +24,13 @@ import qualified IRC.Server.Options as Opts
 
 data Shared = Shared
     { clients   :: IM.IntMap Client
+    , uids      :: M.Map String Int
     }
 
 defaultShared :: Shared
 defaultShared = Shared
     { clients   = IM.empty
+    , uids      = M.empty
     }
 
 data Env = Env

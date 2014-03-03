@@ -112,7 +112,11 @@ serveClient env sockAddr = do
     atomically $ do
         shared <- readTVar sharedT
         let newClients = IM.delete uid (Env.clients shared)
-        writeTVar sharedT shared {Env.clients=newClients}
+        case IM.lookup uid (Env.clients shared) of
+            Just (Client.Client {Client.nick=Just nick}) -> do
+                let newUids = M.delete nick (Env.uids shared)
+                writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
+            _ -> writeTVar sharedT shared {Env.clients=newClients}
     tryIOError $ hClose handle
     return ()
   where
