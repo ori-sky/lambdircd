@@ -98,14 +98,18 @@ serveClient env sockAddr = do
             }
         case maybeEnv of
             Just newEnv -> do
-                sendNumeric newEnv (Numeric 1) ["Welcome to lambdircd " ++ nick]
-                sendNumeric newEnv (Numeric 2) ["Your host is just.nothing[0.0.0.0/6667], running lambdircd"]
-                sendNumeric newEnv (Numeric 3) ["This server was created (Just now)"]
-                sendNumeric newEnv (Numeric 375) ["- lambdircd Message of the Day -"]
-                sendNumeric newEnv (Numeric 372) ["- Welcome to lambdircd"]
-                sendNumeric newEnv (Numeric 376) ["End of /MOTD command"]
-                sendNumeric newEnv (Numeric 0) ["Your host is `" ++ fromJust (Client.host newClient) ++ "`"]
-                loopClient newEnv False
+                shared <- atomically $ readTVar sharedT
+                if M.notMember (map toUpper nick) (Env.uids shared)
+                    then do
+                        sendNumeric newEnv (Numeric 1) ["Welcome to lambdircd " ++ nick]
+                        sendNumeric newEnv (Numeric 2) ["Your host is just.nothing[0.0.0.0/6667], running lambdircd"]
+                        sendNumeric newEnv (Numeric 3) ["This server was created (Just now)"]
+                        sendNumeric newEnv (Numeric 375) ["- lambdircd Message of the Day -"]
+                        sendNumeric newEnv (Numeric 372) ["- Welcome to lambdircd"]
+                        sendNumeric newEnv (Numeric 376) ["End of /MOTD command"]
+                        sendNumeric newEnv (Numeric 0) ["Your host is `" ++ fromJust (Client.host newClient) ++ "`"]
+                        loopClient newEnv False
+                    else sendClient newClient "ERROR :Closing Link (Nick collision)"
               where
                 newClient = Env.client newEnv
                 Just nick = Client.nick newClient
@@ -162,7 +166,6 @@ handleLine env = do
                     -> M.insert (map toUpper nick) uid $ M.delete (map toUpper oldNick) (Env.uids shared)
                 _   -> M.insert (map toUpper nick) uid (Env.uids shared)
         writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
-        return newUids
 
     line <- hGetLine handle
     let msg = parseMessage line
