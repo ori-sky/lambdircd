@@ -69,11 +69,20 @@ acceptLoop sock env = do
         forkIO (serveClient newEnv sockAddr)
     acceptLoop sock env
 
+lookupHost :: SockAddr -> IO String
+lookupHost sockAddr = catchIOError f c
+  where
+    f = do
+        (Just hostName, Nothing) <- getNameInfo [] True False sockAddr
+        return hostName
+    c = (\_ -> do
+            (Just ip, Nothing) <- getNameInfo [NI_NUMERICHOST] True False sockAddr
+            return ip
+        )
+
 serveClient :: Env.Env -> SockAddr -> IO ()
 serveClient env sockAddr = do
-    sendClient client ":lambdircd NOTICE * :*** Looking up your hostname..."
-    (Just hostName, Nothing) <- getNameInfo [] True False sockAddr
-    sendClient client ":lambdircd NOTICE * :*** Found your hostname"
+    host <- lookupHost sockAddr
 
     shared <- atomically $ readTVar sharedT
     let uid = if IM.null (Env.clients shared) then 1
