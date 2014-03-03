@@ -17,6 +17,7 @@ module IRC.Server
 ( serveIRC
 ) where
 
+import Data.Char (toUpper)
 import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
@@ -114,7 +115,7 @@ serveClient env sockAddr = do
         let newClients = IM.delete uid (Env.clients shared)
         case IM.lookup uid (Env.clients shared) of
             Just (Client.Client {Client.nick=Just nick}) -> do
-                let newUids = M.delete nick (Env.uids shared)
+                let newUids = M.delete (map toUpper nick) (Env.uids shared)
                 writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
             _ -> writeTVar sharedT shared {Env.clients=newClients}
     tryIOError $ hClose handle
@@ -158,9 +159,9 @@ handleLine env = do
         let newClients = IM.insert uid client (Env.clients shared)
         let newUids = case IM.lookup uid (Env.clients shared) of
                 Just Client.Client {Client.nick=Just oldNick} -> do
-                    M.insert nick uid $ M.delete oldNick (Env.uids shared)
+                    M.insert (map toUpper nick) uid $ M.delete (map toUpper oldNick) (Env.uids shared)
                 _ -> do
-                    M.insert nick uid (Env.uids shared)
+                    M.insert (map toUpper nick) uid (Env.uids shared)
         writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
         return newUids
     print uids
