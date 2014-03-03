@@ -90,7 +90,11 @@ serveClient env sockAddr = do
 
     tryIOError $ do
         maybeEnv <- timeout (toMicro connectTimeout) $ registerClient env
-            {Env.client=client {Client.uid=Just uid}}
+            { Env.client = client
+                { Client.uid    = Just uid
+                , Client.host   = Just host
+                }
+            }
         case maybeEnv of
             Just newEnv -> do
                 sendNumeric newEnv (Numeric 1) ["Welcome to lambdircd " ++ nick]
@@ -99,6 +103,7 @@ serveClient env sockAddr = do
                 sendNumeric newEnv (Numeric 375) ["- lambdircd Message of the Day -"]
                 sendNumeric newEnv (Numeric 372) ["- Welcome to lambdircd"]
                 sendNumeric newEnv (Numeric 376) ["End of /MOTD command"]
+                sendNumeric newEnv (Numeric 0) ["Your host is `" ++ fromJust (Client.host newClient) ++ "`"]
                 loopClient newEnv False
               where
                 newClient = Env.client newEnv
