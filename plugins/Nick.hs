@@ -36,8 +36,8 @@ nick :: CommandHandler
 nick env (Message _ _ (nick:_))
     | isClientRegistered client = do
         sendClient client $ (':':oldNick) ++ " NICK :" ++ nick
-        changeNick env nick
-    | otherwise = changeNick env nick
+        tryChangeNick env nick
+    | otherwise = tryChangeNick env nick
   where
     client = Env.client env
     Just oldNick = Client.nick client
@@ -45,8 +45,8 @@ nick env _ = do
     sendNumeric env (Numeric 431) ["No nickname given"]
     return env
 
-changeNick :: Env.Env -> String -> IO Env.Env
-changeNick env newNick = do
+tryChangeNick :: Env.Env -> String -> IO Env.Env
+tryChangeNick env newNick = do
     shared <- atomically $ readTVar sharedT
     if newNickUpper == map toUpper nick && newNick /= nick
         then return env {Env.client=client {Client.nick=Just newNick}}
@@ -59,4 +59,4 @@ changeNick env newNick = do
     newNickUpper = map toUpper newNick
     Just sharedT = Env.shared env
     client = Env.client env
-    nick = fromMaybe "*" (Client.nick client)
+    nick = fromMaybe "" (Client.nick client)
