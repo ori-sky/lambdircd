@@ -158,10 +158,9 @@ handleLine env = do
         shared <- readTVar sharedT
         let newClients = IM.insert uid client (Env.clients shared)
         let newUids = case IM.lookup uid (Env.clients shared) of
-                Just Client.Client {Client.nick=Just oldNick} -> do
-                    M.insert (map toUpper nick) uid $ M.delete (map toUpper oldNick) (Env.uids shared)
-                _ -> do
-                    M.insert (map toUpper nick) uid (Env.uids shared)
+                Just Client.Client {Client.nick=Just oldNick}
+                    -> M.insert (map toUpper nick) uid $ M.delete (map toUpper oldNick) (Env.uids shared)
+                _   -> M.insert (map toUpper nick) uid (Env.uids shared)
         writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
         return newUids
     print uids
