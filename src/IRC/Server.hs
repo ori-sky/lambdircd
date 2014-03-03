@@ -153,10 +153,20 @@ loopClient env pinged = do
 
 handleLine :: Env.Env -> IO Env.Env
 handleLine env = do
-    atomically $ do
+    uids <- atomically $ do
         shared <- readTVar sharedT
         let newClients = IM.insert uid client (Env.clients shared)
-        writeTVar sharedT shared {Env.clients=newClients}
+        case IM.lookup uid (Env.clients shared) of
+            Just (Client.Client {Client.nick=Just oldNick}) -> do
+                let newUids = M.insert nick uid $ M.delete oldNick (Env.uids shared)
+                writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
+                return newUids
+            _ -> do
+                let newUids = M.insert nick uid (Env.uids shared)
+                writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
+                return newUids
+    print uids
+
     line <- hGetLine handle
     let msg = parseMessage line
     case M.lookup (command msg) (Env.handlers env) of
@@ -169,8 +179,9 @@ handleLine env = do
   where
     Just sharedT = Env.shared env
     client = Env.client env
-    Just uid = Client.uid client
     Just handle = Client.handle client
+    Just uid = Client.uid client
+    Just nick = Client.nick client
     -- force thread crash if Nothing which should never happen here
 
 toMicro :: Num a => a -> a
