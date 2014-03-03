@@ -17,6 +17,7 @@ module IRC.Server.Client where
 
 import Data.Maybe
 import System.IO
+import qualified IRC.Hostmask as H
 
 data Client = Client
     { uid       :: Maybe Int
@@ -42,6 +43,13 @@ isClientRegistered client =
     isJust (nick client) &&
     isJust (user client) &&
     isJust (realName client)
+
+clientToMask :: Client -> H.Hostmask
+clientToMask client = H.Hostmask n u h
+  where
+    Just n = nick client
+    Just u = user client
+    Just h = host client
 
 sendClient :: Client -> String -> IO ()
 sendClient client message = do
