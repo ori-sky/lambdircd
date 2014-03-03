@@ -156,15 +156,13 @@ handleLine env = do
     uids <- atomically $ do
         shared <- readTVar sharedT
         let newClients = IM.insert uid client (Env.clients shared)
-        case IM.lookup uid (Env.clients shared) of
-            Just (Client.Client {Client.nick=Just oldNick}) -> do
-                let newUids = M.insert nick uid $ M.delete oldNick (Env.uids shared)
-                writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
-                return newUids
-            _ -> do
-                let newUids = M.insert nick uid (Env.uids shared)
-                writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
-                return newUids
+        let newUids = case IM.lookup uid (Env.clients shared) of
+                Just Client.Client {Client.nick=Just oldNick} -> do
+                    M.insert nick uid $ M.delete oldNick (Env.uids shared)
+                _ -> do
+                    M.insert nick uid (Env.uids shared)
+        writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
+        return newUids
     print uids
 
     line <- hGetLine handle
