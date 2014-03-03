@@ -48,11 +48,11 @@ nick env _ = do
 changeNick :: Env.Env -> String -> IO Env.Env
 changeNick env newNick = do
     shared <- atomically $ readTVar sharedT
-    case newNickUpper == map toUpper nick of
-        True    -> return env {Env.client=client {Client.nick=Just newNick}}
-        False   -> case M.member newNickUpper (Env.uids shared) of
-            False   -> return env {Env.client=client {Client.nick=Just newNick}}
-            True    -> do
+    if newNickUpper == map toUpper nick && newNick /= nick
+        then return env {Env.client=client {Client.nick=Just newNick}}
+        else if M.notMember newNickUpper (Env.uids shared)
+            then return env {Env.client=client {Client.nick=Just newNick}}
+            else do
                 sendNumeric env (Numeric 433) [newNick, "Nickname is already in use"]
                 return env
   where

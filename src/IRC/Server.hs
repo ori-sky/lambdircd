@@ -154,7 +154,7 @@ loopClient env pinged = do
 
 handleLine :: Env.Env -> IO Env.Env
 handleLine env = do
-    uids <- atomically $ do
+    atomically $ do
         shared <- readTVar sharedT
         let newClients = IM.insert uid client (Env.clients shared)
         let newUids = case IM.lookup uid (Env.clients shared) of
@@ -163,7 +163,6 @@ handleLine env = do
                 _   -> M.insert (map toUpper nick) uid (Env.uids shared)
         writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
         return newUids
-    print uids
 
     line <- hGetLine handle
     let msg = parseMessage line
