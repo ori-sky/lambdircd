@@ -49,6 +49,7 @@ whois env (Message _ _ (target:[]))
                     Just host = Client.host targetClient
                     Just real = Client.realName targetClient
                 sendNumeric env (Numeric 311) [nick, user, host, "*", real]
+                sendNumeric env (Numeric 318) [nick, "End of /WHOIS list"]
             else sendNumeric env (Numeric 401) [target, "No such nick"]
         return env
     | otherwise = return env
