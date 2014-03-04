@@ -27,6 +27,7 @@ main = serveIRC defaultEnv
             , "User"
             , "Join"
             , "Privmsg"
+            , "Whois"
             , "Num"
             ]
         }
