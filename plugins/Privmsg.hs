@@ -35,10 +35,11 @@ privmsg :: CommandHandler
 privmsg env (Message _ _ (target:text:_))
     | isClientRegistered client = do
         shared <- atomically $ readTVar sharedT
-        let targetClient = Env.clients shared IM.! (Env.uids shared M.! targetUpper)
-        let msg = ':' : show (clientToMask client) ++ " PRIVMSG " ++ target ++ " :" ++ text
         if M.member targetUpper (Env.uids shared)
-            then sendClient targetClient msg
+            then do
+                let targetClient = Env.clients shared IM.! (Env.uids shared M.! targetUpper)
+                let msg = ':' : show (clientToMask client) ++ " PRIVMSG " ++ target ++ " :" ++ text
+                sendClient targetClient msg
             else sendNumeric env (Numeric 401) [target, "No such nick/channel"]
         return env
     | otherwise = return env
