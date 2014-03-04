@@ -16,7 +16,6 @@
 module Num where
 
 import qualified Data.IntMap as IM
-import Control.Concurrent.STM
 import IRC.Server.Client (sendClient)
 import qualified IRC.Server.Environment as Env
 import Plugin
@@ -29,9 +28,8 @@ plugin = defaultPlugin
 
 num :: CommandHandler
 num env _ = do
-    shared <- atomically $ readTVar sharedT
-    sendClient client $ show (IM.size (Env.clients shared))
+    sendClient client $ show (IM.size (Env.clients local))
     return env
   where
-    Just sharedT = Env.shared env
+    local = Env.local env
     client = Env.client env

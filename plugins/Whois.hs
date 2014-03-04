@@ -18,7 +18,6 @@ module Whois where
 import Data.Char (toUpper)
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
-import Control.Concurrent.STM
 import IRC.Message
 import IRC.Numeric
 import IRC.Server.Client (isClientRegistered)
@@ -40,10 +39,9 @@ whois env (Message _ _ (server:_:_))
 whois env (Message pfx cmd (_:target:_)) = whois env (Message pfx cmd [target])
 whois env (Message _ _ (target:[]))
     | isClientRegistered client = do
-        shared <- atomically $ readTVar sharedT
-        if M.member targetUpper (Env.uids shared)
+        if M.member targetUpper (Env.uids local)
             then do
-                let targetClient = Env.clients shared IM.! (Env.uids shared M.! targetUpper)
+                let targetClient = Env.clients local IM.! (Env.uids local M.! targetUpper)
                     Just nick = Client.nick targetClient
                     Just user = Client.user targetClient
                     Just host = Client.host targetClient
@@ -55,7 +53,7 @@ whois env (Message _ _ (target:[]))
     | otherwise = return env
   where
     targetUpper = map toUpper target
-    Just sharedT = Env.shared env
+    local = Env.local env
     client = Env.client env
 whois env _
     | isClientRegistered client = do

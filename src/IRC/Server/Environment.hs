@@ -17,7 +17,7 @@ module IRC.Server.Environment where
 
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
-import Control.Concurrent.STM
+import Control.Concurrent.MVar
 import IRC.Message (Message(..))
 import IRC.Server.Client
 import qualified IRC.Server.Options as Opts
@@ -37,7 +37,8 @@ data Env = Env
     { options   :: Opts.Options
     , client    :: Client
     , handlers  :: M.Map String (Env -> Message -> IO Env)
-    , shared    :: Maybe (TVar Shared)
+    , shared    :: Maybe (MVar Shared)
+    , local     :: Shared
     }
 
 defaultEnv :: Env
@@ -46,4 +47,5 @@ defaultEnv = Env
     , client    = defaultClient
     , handlers  = M.empty
     , shared    = Nothing
+    , local     = defaultShared
     }

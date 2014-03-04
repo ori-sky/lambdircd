@@ -18,7 +18,6 @@ module Privmsg where
 import Data.Char (toUpper)
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
-import Control.Concurrent.STM
 import IRC.Message
 import IRC.Numeric
 import IRC.Server.Client (isClientRegistered, clientToMask, sendClient)
@@ -34,10 +33,9 @@ plugin = defaultPlugin
 privmsg :: CommandHandler
 privmsg env (Message _ _ (target:text:_))
     | isClientRegistered client = do
-        shared <- atomically $ readTVar sharedT
-        if M.member targetUpper (Env.uids shared)
+        if M.member targetUpper (Env.uids local)
             then do
-                let targetClient = Env.clients shared IM.! (Env.uids shared M.! targetUpper)
+                let targetClient = Env.clients local IM.! (Env.uids local M.! targetUpper)
                 let msg = ':' : show (clientToMask client) ++ " PRIVMSG " ++ target ++ " :" ++ text
                 sendClient targetClient msg
             else sendNumeric env (Numeric 401) [target, "No such nick/channel"]
@@ -45,7 +43,7 @@ privmsg env (Message _ _ (target:text:_))
     | otherwise = return env
   where
     targetUpper = map toUpper target
-    Just sharedT = Env.shared env
+    local = Env.local env
     client = Env.client env
 privmsg env (Message _ _ (_:[]))
     | isClientRegistered client = do

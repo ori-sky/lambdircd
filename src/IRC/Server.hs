@@ -22,7 +22,7 @@ import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import Control.Concurrent (forkIO)
-import Control.Concurrent.STM
+import Control.Concurrent.MVar
 import System.IO
 import System.IO.Error
 import System.Timeout
@@ -40,9 +40,9 @@ import Plugin.Load
 serveIRC :: Env.Env -> IO ()
 serveIRC env = withSocketsDo $ do
     plugins <- mapM loadPlugin pluginNames
-    sharedT <- atomically $ newTVar Env.defaultShared
+    sharedM <- newMVar Env.defaultShared
     let handlers = M.unions $ map (M.fromList.P.handlers) (catMaybes plugins)
-    let newEnv = env {Env.handlers=handlers, Env.shared=Just sharedT}
+    let newEnv = env {Env.handlers=handlers, Env.shared=Just sharedM}
 
     sock <- socket AF_INET Stream defaultProtocol
     setSocketOption sock ReuseAddr 1
@@ -85,7 +85,7 @@ serveClient :: Env.Env -> SockAddr -> IO ()
 serveClient env sockAddr = do
     host <- lookupHost sockAddr
 
-    shared <- atomically $ readTVar sharedT
+    shared <- readMVar sharedM
     let uid = if IM.null (Env.clients shared) then 1
         else fst (IM.findMax (Env.clients shared)) + 1
 
@@ -95,10 +95,11 @@ serveClient env sockAddr = do
                 { Client.uid    = Just uid
                 , Client.host   = Just host
                 }
+            , Env.local = shared
             }
         case maybeEnv of
             Just newEnv -> do
-                shared <- atomically $ readTVar sharedT
+                shared <- readMVar sharedM
                 if M.notMember (map toUpper nick) (Env.uids shared)
                     then do
                         sendNumeric newEnv (Numeric 1) ["Welcome to lambdircd " ++ nick]
@@ -108,24 +109,25 @@ serveClient env sockAddr = do
                         sendNumeric newEnv (Numeric 372) ["- Welcome to lambdircd"]
                         sendNumeric newEnv (Numeric 376) ["End of /MOTD command"]
                         sendNumeric newEnv (Numeric 0) ["Your host is `" ++ fromJust (Client.host newClient) ++ "`"]
-                        loopClient newEnv False
+                        shared <- takeMVar sharedM
+                        loopClient newEnv {Env.local=shared} False
                     else sendClient newClient "ERROR :Closing Link (Nick collision)"
               where
                 newClient = Env.client newEnv
                 Just nick = Client.nick newClient
             Nothing -> return ()
-    atomically $ do
-        shared <- readTVar sharedT
-        let newClients = IM.delete uid (Env.clients shared)
-        case IM.lookup uid (Env.clients shared) of
-            Just (Client.Client {Client.nick=Just nick}) -> do
-                let newUids = M.delete (map toUpper nick) (Env.uids shared)
-                writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
-            _ -> writeTVar sharedT shared {Env.clients=newClients}
+    modifyMVar_ sharedM $
+        \shared -> do
+            let newClients = IM.delete uid (Env.clients shared)
+            return $ case IM.lookup uid (Env.clients shared) of
+                Just (Client.Client {Client.nick=Just nick}) -> do
+                    let newUids = M.delete (map toUpper nick) (Env.uids shared)
+                    shared {Env.clients=newClients, Env.uids=newUids}
+                _ -> shared {Env.clients=newClients}
     tryIOError $ hClose handle
     return ()
   where
-    Just sharedT = Env.shared env
+    Just sharedM = Env.shared env
     client = Env.client env
     Just handle = Client.handle client
     Env.Env {Env.options=Opts.Options {Opts.connectTimeout=connectTimeout}} = env
@@ -133,15 +135,20 @@ serveClient env sockAddr = do
 registerClient :: Env.Env -> IO Env.Env
 registerClient env = do
     line <- hGetLine handle
+    shared <- readMVar sharedM
+    let localEnv = env {Env.local=shared}
+
     let msg = parseMessage line
-    case M.lookup (command msg) (Env.handlers env) of
+    case M.lookup (command msg) (Env.handlers localEnv) of
         Just handler -> do
-            newEnv <- handler env msg
+            newEnv <- handler localEnv msg
             case isClientRegistered (Env.client newEnv) of
                 True    -> return newEnv
                 False   -> registerClient newEnv
         Nothing -> registerClient env
-  where Just handle = Client.handle (Env.client env)
+  where
+    Just sharedM = Env.shared env
+    Just handle = Client.handle (Env.client env)
 
 loopClient :: Env.Env -> Bool -> IO ()
 loopClient env pinged = do
@@ -158,26 +165,26 @@ loopClient env pinged = do
 
 handleLine :: Env.Env -> IO Env.Env
 handleLine env = do
-    atomically $ do
-        shared <- readTVar sharedT
-        let newClients = IM.insert uid client (Env.clients shared)
-        let newUids = case IM.lookup uid (Env.clients shared) of
-                Just Client.Client {Client.nick=Just oldNick}
-                    -> M.insert (map toUpper nick) uid $ M.delete (map toUpper oldNick) (Env.uids shared)
-                _   -> M.insert (map toUpper nick) uid (Env.uids shared)
-        writeTVar sharedT shared {Env.clients=newClients, Env.uids=newUids}
+    let newClients = IM.insert uid client (Env.clients local)
+        newUids = case IM.lookup uid (Env.clients local) of
+            Just Client.Client {Client.nick=Just oldNick}
+                -> M.insert (map toUpper nick) uid $ M.delete (map toUpper oldNick) (Env.uids local)
+            _   -> M.insert (map toUpper nick) uid (Env.uids local)
 
+    putMVar sharedM local {Env.clients=newClients, Env.uids=newUids}
     line <- hGetLine handle
+    shared <- takeMVar sharedM
+    let newEnv = env {Env.local=shared}
+
     let msg = parseMessage line
-    case M.lookup (command msg) (Env.handlers env) of
-        Just handler -> do
-            let newEnv = handler env msg
-            newEnv
+    case M.lookup (command msg) (Env.handlers newEnv) of
+        Just handler -> handler newEnv msg
         Nothing -> do
-            sendNumeric env (Numeric 431) [command msg, "Unknown command"]
-            handleLine env
+            sendNumeric newEnv (Numeric 431) [command msg, "Unknown command"]
+            handleLine newEnv
   where
-    Just sharedT = Env.shared env
+    Just sharedM = Env.shared env
+    local = Env.local env
     client = Env.client env
     Just handle = Client.handle client
     Just uid = Client.uid client
