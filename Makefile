@@ -3,10 +3,10 @@ EXECUTABLE=lambdircd
 all: build-plugins build-main
 
 build-plugins:
-	ghc -W -O2 -isrc plugins/*.hs
+	ghc -W -O2 -isrc plugins/*.hs $(CFLAGS)
 
 build-main:
-	ghc -W -O2 -threaded -isrc src/Main -o $(EXECUTABLE)
+	ghc -W -O2 -threaded -isrc src/Main -o $(EXECUTABLE) $(CFLAGS)
 
 clean:
 	rm -fv $(EXECUTABLE)
