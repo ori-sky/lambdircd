@@ -31,17 +31,17 @@ plugin = defaultPlugin
 user :: CommandHandler
 user env (Message _ _ (user:_:_:realname:_))
     | isClientRegistered client = do
-        sendNumeric env (Numeric 462) ["You may not reregister"]
+        sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
         return env
     | otherwise = return env {Env.client=client {Client.user=Just user, Client.realName=Just realname}}
   where
     client = Env.client env
 user env _
     | isClientRegistered client = do
-        sendNumeric env (Numeric 462) ["You may not reregister"]
+        sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
         return env
     | otherwise = do
-        sendNumeric env (Numeric 462) ["USER", "Not enough parameters"]
+        sendNumeric env numERR_NEEDMOREPARAMS ["USER", "Not enough parameters"]
         return env
   where
     client = Env.client env

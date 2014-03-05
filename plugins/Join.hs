@@ -22,25 +22,28 @@ import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
 import Plugin
 
-plugin = defaultPlugin
-    { handlers =
-        [ ("JOIN", join)
-        ]
-    }
+plugin = defaultPlugin {handlers=[("JOIN", join)]}
 
 join :: CommandHandler
 join env (Message _ _ (chan:_))
-    | isClientRegistered client = do
-        sendClient client $ ":" ++ nick ++ " JOIN " ++ chan
-        return env
+    | isClientRegistered client = if c == '#'
+        then do
+            sendClient client $ ":" ++ nick ++ " JOIN " ++ chan
+            sendNumeric env numRPL_NAMREPLY ["=", chan, nick]
+            sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
+            return env {Env.client=client {Client.channels=chan:channels}}
+        else do
+            sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"]
+            return env
     | otherwise = return env
   where
     client = Env.client env
     Just nick = Client.nick client
+    channels = Client.channels client
+    c:_ = chan
 join env _
     | isClientRegistered client = do
-        sendNumeric env (Numeric 460) ["JOIN", "Not enough parameters"]
+        sendNumeric env numERR_NEEDMOREPARAMS ["JOIN", "Not enough parameters"]
         return env
     | otherwise = return env
-  where
-    client = Env.client env
+  where client = Env.client env

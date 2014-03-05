@@ -38,7 +38,7 @@ privmsg env (Message _ _ (target:text:_))
                 let targetClient = Env.clients local IM.! (Env.uids local M.! targetUpper)
                 let msg = ':' : show (clientToMask client) ++ " PRIVMSG " ++ target ++ " :" ++ text
                 sendClient targetClient msg
-            else sendNumeric env (Numeric 401) [target, "No such nick/channel"]
+            else sendNumeric env numERR_NOSUCHNICK [target, "No such nick/channel"]
         return env
     | otherwise = return env
   where
@@ -47,14 +47,14 @@ privmsg env (Message _ _ (target:text:_))
     client = Env.client env
 privmsg env (Message _ _ (_:[]))
     | isClientRegistered client = do
-        sendNumeric env (Numeric 412) ["No text to send"]
+        sendNumeric env numERR_NOTEXTTOSEND ["No text to send"]
         return env
     | otherwise = return env
   where
     client = Env.client env
 privmsg env _
     | isClientRegistered client = do
-        sendNumeric env (Numeric 411) ["No recipient given (PRIVMSG)"]
+        sendNumeric env numERR_NORECIPIENT ["No recipient given (PRIVMSG)"]
         return env
     | otherwise = return env
   where

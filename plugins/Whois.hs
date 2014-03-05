@@ -31,7 +31,7 @@ whois :: CommandHandler
 {-
 whois env (Message _ _ (server:_:_))
     | isClientRegistered client = do
-        sendNumeric env (Numeric 402) [server, "No such server"]
+        sendNumeric env numERR_NOSUCHSERVER [server, "No such server"]
         return env
     | otherwise = return env
   where client = Env.client env
@@ -46,9 +46,9 @@ whois env (Message _ _ (target:[]))
                     Just user = Client.user targetClient
                     Just host = Client.host targetClient
                     Just real = Client.realName targetClient
-                sendNumeric env (Numeric 311) [nick, user, host, "*", real]
-                sendNumeric env (Numeric 318) [nick, "End of /WHOIS list"]
-            else sendNumeric env (Numeric 401) [target, "No such nick"]
+                sendNumeric env numRPL_WHOISUSER [nick, user, host, "*", real]
+                sendNumeric env numRPL_ENDOFWHOIS [nick, "End of /WHOIS list"]
+            else sendNumeric env numERR_NOSUCHNICK [target, "No such nick"]
         return env
     | otherwise = return env
   where
@@ -57,7 +57,7 @@ whois env (Message _ _ (target:[]))
     client = Env.client env
 whois env _
     | isClientRegistered client = do
-        sendNumeric env (Numeric 460) ["WHOIS", "Not enough parameters"]
+        sendNumeric env numERR_NEEDMOREPARAMS ["WHOIS", "Not enough parameters"]
         return env
     | otherwise = return env
   where client = Env.client env

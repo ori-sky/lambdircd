@@ -102,12 +102,12 @@ serveClient env sockAddr = do
                 shared <- readMVar sharedM
                 if M.notMember (map toUpper nick) (Env.uids shared)
                     then do
-                        sendNumeric newEnv (Numeric 1) ["Welcome to lambdircd " ++ nick]
-                        sendNumeric newEnv (Numeric 2) ["Your host is just.nothing[0.0.0.0/6667], running lambdircd"]
-                        sendNumeric newEnv (Numeric 3) ["This server was created (Just now)"]
-                        sendNumeric newEnv (Numeric 375) ["- lambdircd Message of the Day -"]
-                        sendNumeric newEnv (Numeric 372) ["- Welcome to lambdircd"]
-                        sendNumeric newEnv (Numeric 376) ["End of /MOTD command"]
+                        sendNumeric newEnv numRPL_WELCOME   ["Welcome to lambdircd " ++ nick]
+                        sendNumeric newEnv numRPL_YOURHOST  ["Your host is lambdircd, running lambdircd"]
+                        sendNumeric newEnv numRPL_CREATED   ["This server was created (Just now)"]
+                        sendNumeric newEnv numRPL_MOTDSTART ["- lambdircd Message of the Day -"]
+                        sendNumeric newEnv numRPL_MOTD      ["- Welcome to lambdircd"]
+                        sendNumeric newEnv numRPL_ENDOFMOTD ["End of /MOTD command"]
                         sendNumeric newEnv (Numeric 0) ["Your host is `" ++ fromJust (Client.host newClient) ++ "`"]
                         shared <- takeMVar sharedM
                         loopClient newEnv {Env.local=shared} False
@@ -180,7 +180,7 @@ handleLine env = do
     case M.lookup (command msg) (Env.handlers newEnv) of
         Just handler -> handler newEnv msg
         Nothing -> do
-            sendNumeric newEnv (Numeric 431) [command msg, "Unknown command"]
+            sendNumeric newEnv numERR_UNKNOWNCOMMAND [command msg, "Unknown command"]
             handleLine newEnv
   where
     Just sharedM = Env.shared env

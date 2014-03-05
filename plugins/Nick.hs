@@ -41,7 +41,7 @@ nick env (Message _ _ (nick:_))
     client = Env.client env
     Just oldNick = Client.nick client
 nick env _ = do
-    sendNumeric env (Numeric 431) ["No nickname given"]
+    sendNumeric env numERR_NONICKNAMEGIVEN ["No nickname given"]
     return env
 
 tryChangeNick :: Env.Env -> String -> IO Env.Env
@@ -51,7 +51,7 @@ tryChangeNick env newNick = do
         else if M.notMember newNickUpper (Env.uids local)
             then return env {Env.client=client {Client.nick=Just newNick}}
             else do
-                sendNumeric env (Numeric 433) [newNick, "Nickname is already in use"]
+                sendNumeric env numERR_NICKNAMEINUSE [newNick, "Nickname is already in use"]
                 return env
   where
     newNickUpper = map toUpper newNick

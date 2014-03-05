@@ -36,3 +36,23 @@ sendNumeric env numeric params = sendClient client $
   where
     client = Env.client env
     nick = fromMaybe "*" (Client.nick client)
+
+numRPL_WELCOME              = Numeric 001
+numRPL_YOURHOST             = Numeric 002
+numRPL_CREATED              = Numeric 003
+numRPL_WHOISUSER            = Numeric 311
+numRPL_ENDOFWHOIS           = Numeric 318
+numRPL_NAMREPLY             = Numeric 353
+numRPL_ENDOFNAMES           = Numeric 366
+numRPL_MOTD                 = Numeric 372
+numRPL_MOTDSTART            = Numeric 375
+numRPL_ENDOFMOTD            = Numeric 376
+numERR_NOSUCHNICK           = Numeric 401
+numERR_NOSUCHCHANNEL        = Numeric 403
+numERR_NORECIPIENT          = Numeric 411
+numERR_NOTEXTTOSEND         = Numeric 412
+numERR_UNKNOWNCOMMAND       = Numeric 421
+numERR_NONICKNAMEGIVEN      = Numeric 431
+numERR_NICKNAMEINUSE        = Numeric 433
+numERR_NEEDMOREPARAMS       = Numeric 461
+numERR_ALREADYREGISTERED    = Numeric 462

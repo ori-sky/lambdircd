@@ -26,6 +26,7 @@ data Client = Client
     , user      :: Maybe String
     , realName  :: Maybe String
     , host      :: Maybe String
+    , channels  :: [String]
     } deriving (Show)
 
 defaultClient :: Client
@@ -36,6 +37,7 @@ defaultClient = Client
     , user      = Nothing
     , realName  = Nothing
     , host      = Nothing
+    , channels  = []
     }
 
 isClientRegistered :: Client -> Bool
