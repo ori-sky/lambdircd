@@ -74,12 +74,11 @@ lookupHost :: SockAddr -> IO String
 lookupHost sockAddr = catchIOError f c
   where
     f = do
-        (Just hostName, Nothing) <- getNameInfo [] True False sockAddr
+        (Just hostName, _) <- getNameInfo [] True False sockAddr
         return hostName
-    c = (\_ -> do
-            (Just ip, Nothing) <- getNameInfo [NI_NUMERICHOST] True False sockAddr
+    c = \_ -> do
+            (Just ip, _) <- getNameInfo [NI_NUMERICHOST] True False sockAddr
             return ip
-        )
 
 serveClient :: Env.Env -> SockAddr -> IO ()
 serveClient env sockAddr = do
@@ -119,9 +118,9 @@ serveClient env sockAddr = do
     return ()
   where
     Just sharedM = Env.shared env
+    Env.Env {Env.options=Opts.Options {Opts.connectTimeout=connectTimeout}} = env
     client = Env.client env
     Just handle = Client.handle client
-    Env.Env {Env.options=Opts.Options {Opts.connectTimeout=connectTimeout}} = env
 
 registerClient :: Env.Env -> IO Env.Env
 registerClient env = do
