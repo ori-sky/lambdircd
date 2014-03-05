@@ -20,28 +20,30 @@ import System.IO
 import qualified IRC.Hostmask as H
 
 data Client = Client
-    { uid       :: Maybe Int
-    , handle    :: Maybe Handle
-    , nick      :: Maybe String
-    , user      :: Maybe String
-    , realName  :: Maybe String
-    , host      :: Maybe String
-    , channels  :: [String]
+    { uid           :: Maybe Int
+    , handle        :: Maybe Handle
+    , nick          :: Maybe String
+    , user          :: Maybe String
+    , realName      :: Maybe String
+    , host          :: Maybe String
+    , channels      :: [String]
+    , registered    :: Bool
     } deriving (Show)
 
 defaultClient :: Client
 defaultClient = Client
-    { uid       = Nothing
-    , handle    = Nothing
-    , nick      = Nothing
-    , user      = Nothing
-    , realName  = Nothing
-    , host      = Nothing
-    , channels  = []
+    { uid           = Nothing
+    , handle        = Nothing
+    , nick          = Nothing
+    , user          = Nothing
+    , realName      = Nothing
+    , host          = Nothing
+    , channels      = []
+    , registered    = False
     }
 
-isClientRegistered :: Client -> Bool
-isClientRegistered client =
+isClientReady :: Client -> Bool
+isClientReady client =
     isJust (nick client) &&
     isJust (user client) &&
     isJust (realName client)
@@ -57,3 +59,7 @@ sendClient :: Client -> String -> IO ()
 sendClient client message = do
     hPutStr handle' $ message ++ "\r\n"
   where Just handle' = handle client
+
+sendClientFrom :: String -> Client -> String -> IO ()
+sendClientFrom mask client message = sendClient client newMessage
+  where newMessage = ':' : mask ++ ' ' : message

@@ -17,7 +17,6 @@ module User where
 
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (isClientRegistered)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
 import Plugin
@@ -30,14 +29,14 @@ plugin = defaultPlugin
 
 user :: CommandHandler
 user env (Message _ _ (user:_:_:realname:_))
-    | isClientRegistered client = do
+    | Client.registered client = do
         sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
         return env
     | otherwise = return env {Env.client=client {Client.user=Just user, Client.realName=Just realname}}
   where
     client = Env.client env
 user env _
-    | isClientRegistered client = do
+    | Client.registered client = do
         sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
         return env
     | otherwise = do

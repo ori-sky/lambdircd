@@ -20,7 +20,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (isClientRegistered, sendClient)
+import IRC.Server.Client (sendClient)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
 import Plugin
@@ -33,7 +33,7 @@ plugin = defaultPlugin
 
 nick :: CommandHandler
 nick env (Message _ _ (nick:_))
-    | isClientRegistered client = do
+    | Client.registered client = do
         sendClient client $ (':':oldNick) ++ " NICK :" ++ nick
         tryChangeNick env nick
     | otherwise = tryChangeNick env nick

@@ -20,7 +20,6 @@ import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (isClientRegistered)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
 import Plugin
@@ -38,7 +37,7 @@ whois env (Message _ _ (server:_:_))
 -}
 whois env (Message pfx cmd (_:target:_)) = whois env (Message pfx cmd [target])
 whois env (Message _ _ (target:[]))
-    | isClientRegistered client = do
+    | Client.registered client = do
         if M.member targetUpper (Env.uids local)
             then do
                 let targetClient = Env.clients local IM.! (Env.uids local M.! targetUpper)
@@ -56,7 +55,7 @@ whois env (Message _ _ (target:[]))
     local = Env.local env
     client = Env.client env
 whois env _
-    | isClientRegistered client = do
+    | Client.registered client = do
         sendNumeric env numERR_NEEDMOREPARAMS ["WHOIS", "Not enough parameters"]
         return env
     | otherwise = return env

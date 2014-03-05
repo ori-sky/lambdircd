@@ -30,7 +30,7 @@ import Network hiding (accept)
 import Network.Socket
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (defaultClient, isClientRegistered, sendClient)
+import IRC.Server.Client (defaultClient, isClientReady, sendClient)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Options as Opts
 import qualified IRC.Server.Environment as Env
@@ -83,35 +83,26 @@ lookupHost sockAddr = catchIOError f c
 
 serveClient :: Env.Env -> SockAddr -> IO ()
 serveClient env sockAddr = do
-    host <- lookupHost sockAddr
-
-    shared <- readMVar sharedM
-    let uid = if IM.null (Env.clients shared) then 1
+    shared <- takeMVar sharedM
+    let uid = if IM.null (Env.clients shared)
+        then 1
         else fst (IM.findMax (Env.clients shared)) + 1
-
     tryIOError $ do
+        host <- lookupHost sockAddr
         maybeEnv <- timeout (toMicro connectTimeout) $ registerClient env
-            { Env.client = client
-                { Client.uid    = Just uid
-                , Client.host   = Just host
-                }
+            { Env.client = client {Client.uid=Just uid, Client.host=Just host}
             , Env.local = shared
             }
         case maybeEnv of
             Just newEnv -> do
-                shared <- readMVar sharedM
-                if M.notMember (map toUpper nick) (Env.uids shared)
-                    then do
-                        sendNumeric newEnv numRPL_WELCOME   ["Welcome to lambdircd " ++ nick]
-                        sendNumeric newEnv numRPL_YOURHOST  ["Your host is lambdircd, running lambdircd"]
-                        sendNumeric newEnv numRPL_CREATED   ["This server was created (Just now)"]
-                        sendNumeric newEnv numRPL_MOTDSTART ["- lambdircd Message of the Day -"]
-                        sendNumeric newEnv numRPL_MOTD      ["- Welcome to lambdircd"]
-                        sendNumeric newEnv numRPL_ENDOFMOTD ["End of /MOTD command"]
-                        sendNumeric newEnv (Numeric 0) ["Your host is `" ++ fromJust (Client.host newClient) ++ "`"]
-                        shared <- takeMVar sharedM
-                        loopClient newEnv {Env.local=shared} False
-                    else sendClient newClient "ERROR :Closing Link (Nick collision)"
+                sendNumeric newEnv numRPL_WELCOME   ["Welcome to lambdircd " ++ nick]
+                sendNumeric newEnv numRPL_YOURHOST  ["Your host is lambdircd, running lambdircd"]
+                sendNumeric newEnv numRPL_CREATED   ["This server was created (Just now)"]
+                sendNumeric newEnv numRPL_MOTDSTART ["- lambdircd Message of the Day -"]
+                sendNumeric newEnv numRPL_MOTD      ["- Welcome to lambdircd"]
+                sendNumeric newEnv numRPL_ENDOFMOTD ["End of /MOTD command"]
+                sendNumeric newEnv (Numeric 0) ["Your host is `" ++ fromJust (Client.host newClient) ++ "`"]
+                loopClient newEnv {Env.client=newClient {Client.registered=True}} False
               where
                 newClient = Env.client newEnv
                 Just nick = Client.nick newClient
@@ -134,21 +125,33 @@ serveClient env sockAddr = do
 
 registerClient :: Env.Env -> IO Env.Env
 registerClient env = do
+    let newClients = IM.insert uid client (Env.clients local)
+        newUids = case maybeNick of
+            Just nick -> case IM.lookup uid (Env.clients local) of
+                Just Client.Client {Client.nick=Just oldNick}
+                    -> M.insert (map toUpper nick) uid $ M.delete (map toUpper oldNick) (Env.uids local)
+                _   -> M.insert (map toUpper nick) uid (Env.uids local)
+            Nothing -> Env.uids local
+    putMVar sharedM local {Env.clients=newClients, Env.uids=newUids}
     line <- hGetLine handle
-    shared <- readMVar sharedM
+    shared <- takeMVar sharedM
     let localEnv = env {Env.local=shared}
 
     let msg = parseMessage line
     case M.lookup (command msg) (Env.handlers localEnv) of
         Just handler -> do
             newEnv <- handler localEnv msg
-            case isClientRegistered (Env.client newEnv) of
+            case isClientReady (Env.client newEnv) of
                 True    -> return newEnv
                 False   -> registerClient newEnv
-        Nothing -> registerClient env
+        Nothing -> registerClient localEnv
   where
     Just sharedM = Env.shared env
+    local = Env.local env
+    client = Env.client env
     Just handle = Client.handle (Env.client env)
+    Just uid = Client.uid client
+    maybeNick = Client.nick client
 
 loopClient :: Env.Env -> Bool -> IO ()
 loopClient env pinged = do
@@ -170,18 +173,17 @@ handleLine env = do
             Just Client.Client {Client.nick=Just oldNick}
                 -> M.insert (map toUpper nick) uid $ M.delete (map toUpper oldNick) (Env.uids local)
             _   -> M.insert (map toUpper nick) uid (Env.uids local)
-
     putMVar sharedM local {Env.clients=newClients, Env.uids=newUids}
     line <- hGetLine handle
     shared <- takeMVar sharedM
-    let newEnv = env {Env.local=shared}
+    let localEnv = env {Env.local=shared}
 
     let msg = parseMessage line
-    case M.lookup (command msg) (Env.handlers newEnv) of
-        Just handler -> handler newEnv msg
+    case M.lookup (command msg) (Env.handlers localEnv) of
+        Just handler -> handler localEnv msg
         Nothing -> do
-            sendNumeric newEnv numERR_UNKNOWNCOMMAND [command msg, "Unknown command"]
-            handleLine newEnv
+            sendNumeric localEnv numERR_UNKNOWNCOMMAND [command msg, "Unknown command"]
+            handleLine localEnv
   where
     Just sharedM = Env.shared env
     local = Env.local env

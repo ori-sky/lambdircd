@@ -17,7 +17,7 @@ module Join where
 
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (isClientRegistered, sendClient)
+import IRC.Server.Client (sendClient)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
 import Plugin
@@ -26,7 +26,7 @@ plugin = defaultPlugin {handlers=[("JOIN", join)]}
 
 join :: CommandHandler
 join env (Message _ _ (chan:_))
-    | isClientRegistered client = if c == '#'
+    | Client.registered client = if c == '#'
         then do
             sendClient client $ ":" ++ nick ++ " JOIN " ++ chan
             sendNumeric env numRPL_NAMREPLY ["=", chan, nick]
@@ -42,7 +42,7 @@ join env (Message _ _ (chan:_))
     channels = Client.channels client
     c:_ = chan
 join env _
-    | isClientRegistered client = do
+    | Client.registered client = do
         sendNumeric env numERR_NEEDMOREPARAMS ["JOIN", "Not enough parameters"]
         return env
     | otherwise = return env
