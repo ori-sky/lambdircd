@@ -127,7 +127,7 @@ serveClient env sockAddr = do
     return ()
   where
     Just sharedM = Env.shared env
-    Env.Env {Env.options=Opts.Options {Opts.connectTimeout=connectTimeout}} = env
+    Opts.Options {Opts.connectTimeout=connectTimeout} = Env.options env
     baseClient = Env.client env
     Just handle = Client.handle baseClient
 
