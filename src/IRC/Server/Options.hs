@@ -18,16 +18,18 @@ module IRC.Server.Options where
 import Network (PortNumber)
 
 data Options = Options
-    { port              :: PortNumber
+    { plugins           :: [String]
+    , port              :: PortNumber
     , connectTimeout    :: Int
     , pingTimeout       :: Int
-    , plugins           :: [String]
+    , maxChannels       :: Int
     }
 
 defaultOptions :: Options
 defaultOptions = Options
-    { port              = 6667
+    { plugins           = []
+    , port              = 6667
     , connectTimeout    = 20
     , pingTimeout       = 240
-    , plugins           = []
+    , maxChannels       = 5
     }

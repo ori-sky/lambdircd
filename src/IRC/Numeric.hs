@@ -50,6 +50,7 @@ numRPL_MOTDSTART            = Numeric 375
 numRPL_ENDOFMOTD            = Numeric 376
 numERR_NOSUCHNICK           = Numeric 401
 numERR_NOSUCHCHANNEL        = Numeric 403
+numERR_TOOMANYCHANNELS      = Numeric 405
 numERR_NORECIPIENT          = Numeric 411
 numERR_NOTEXTTOSEND         = Numeric 412
 numERR_UNKNOWNCOMMAND       = Numeric 421
