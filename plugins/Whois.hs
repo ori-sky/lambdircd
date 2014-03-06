@@ -18,6 +18,7 @@ module Whois where
 import Data.Char (toUpper)
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
+import Control.Monad (unless)
 import IRC.Message
 import IRC.Numeric
 import qualified IRC.Server.Client as Client
@@ -46,6 +47,7 @@ whois env (Message _ _ (target:[]))
                     Just host = Client.host targetClient
                     Just real = Client.realName targetClient
                 sendNumeric env numRPL_WHOISUSER [nick, user, host, "*", real]
+                unless (null channels) $ sendNumeric env numRPL_WHOISCHANNELS [nick, unwords channels]
                 sendNumeric env numRPL_ENDOFWHOIS [nick, "End of /WHOIS list"]
             else sendNumeric env numERR_NOSUCHNICK [target, "No such nick"]
         return env
@@ -54,6 +56,7 @@ whois env (Message _ _ (target:[]))
     targetUpper = map toUpper target
     local = Env.local env
     client = Env.client env
+    channels = Client.channels client
 whois env _
     | Client.registered client = do
         sendNumeric env numERR_NEEDMOREPARAMS ["WHOIS", "Not enough parameters"]
