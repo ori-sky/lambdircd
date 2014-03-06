@@ -42,6 +42,7 @@ numRPL_YOURHOST             = Numeric 002
 numRPL_CREATED              = Numeric 003
 numRPL_WHOISUSER            = Numeric 311
 numRPL_ENDOFWHOIS           = Numeric 318
+numRPL_WHOISCHANNELS        = Numeric 319
 numRPL_NAMREPLY             = Numeric 353
 numRPL_ENDOFNAMES           = Numeric 366
 numRPL_MOTD                 = Numeric 372
