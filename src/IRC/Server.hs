@@ -18,6 +18,7 @@ module IRC.Server
 ) where
 
 import Data.Char (toUpper)
+import Data.List (sort)
 import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
@@ -82,75 +83,66 @@ lookupHost sockAddr = catchIOError f c
 
 serveClient :: Env.Env -> SockAddr -> IO ()
 serveClient env sockAddr = do
-    shared <- takeMVar sharedM
-    let uid = if IM.null (Env.clients shared)
-        then 1
-        else fst (IM.findMax (Env.clients shared)) + 1
     tryIOError $ do
+        shared <- readMVar sharedM
         host <- lookupHost sockAddr
-        maybeEnv <- timeout (toMicro connectTimeout) $ registerClient env
-            { Env.client = client {Client.uid=Just uid, Client.host=Just host}
-            , Env.local = shared
-            }
+        let client = baseClient {Client.host=Just host}
+        maybeEnv <- timeout (toMicro connectTimeout) $ registerClient env {Env.client=client, Env.local=shared}
         case maybeEnv of
             Just newEnv -> do
-                sendNumeric newEnv numRPL_WELCOME   ["Welcome to lambdircd " ++ nick]
-                sendNumeric newEnv numRPL_YOURHOST  ["Your host is lambdircd, running lambdircd"]
-                sendNumeric newEnv numRPL_CREATED   ["This server was created (Just now)"]
-                sendNumeric newEnv numRPL_MOTDSTART ["- lambdircd Message of the Day -"]
-                sendNumeric newEnv numRPL_MOTD      ["- Welcome to lambdircd"]
-                sendNumeric newEnv numRPL_ENDOFMOTD ["End of /MOTD command"]
-                sendNumeric newEnv (Numeric 0) ["Your host is `" ++ fromJust (Client.host newClient) ++ "`"]
-                loopClient newEnv {Env.client=newClient {Client.registered=True}} False
+                shared <- takeMVar sharedM
+                if M.notMember (map toUpper nick) uids
+                    then do
+                        putMVar sharedM shared {Env.clients=newClients, Env.uids=newUids}
+                        sendNumeric regEnv numRPL_WELCOME   ["Welcome to lambdircd " ++ nick]
+                        sendNumeric regEnv numRPL_YOURHOST  ["Your host is lambdircd, running lambdircd"]
+                        sendNumeric regEnv numRPL_CREATED   ["This server was created (Just now)"]
+                        sendNumeric regEnv numRPL_MOTDSTART ["- lambdircd Message of the Day -"]
+                        sendNumeric regEnv numRPL_MOTD      ["- Welcome to lambdircd"]
+                        sendNumeric regEnv numRPL_ENDOFMOTD ["End of /MOTD command"]
+                        sendNumeric regEnv (Numeric 0) ["Your host is `" ++ host ++ "`"]
+                        tryIOError $ loopClient regEnv False
+                        modifyMVar_ sharedM cleanup
+                    else do
+                        putMVar sharedM shared
+                        sendNumeric regEnv numERR_NICKCOLLISION [nick, "Nickname collision KILL"]
+                        sendClient regClient $ "ERROR :Closing Link " ++ host ++ " (Nickname collision KILL)"
               where
-                newClient = Env.client newEnv
-                Just nick = Client.nick newClient
-            Nothing -> return ()
-    modifyMVar_ sharedM $
-        \shared -> do
-            let newClients = IM.delete uid (Env.clients shared)
-            return $ case IM.lookup uid (Env.clients shared) of
-                Just (Client.Client {Client.nick=Just nick}) -> do
-                    let newUids = M.delete (map toUpper nick) (Env.uids shared)
-                    shared {Env.clients=newClients, Env.uids=newUids}
-                _ -> shared {Env.clients=newClients}
+                clients     = Env.clients shared
+                uids        = Env.uids shared
+                uid         = firstAvailable $ sort (IM.keys clients)
+                regClient   = (Env.client newEnv) {Client.uid=Just uid, Client.registered=True}
+                regEnv      = newEnv {Env.client=regClient}
+                newClients  = IM.insert uid regClient clients
+                newUids     = M.insert (map toUpper nick) uid uids
+                Just nick   = Client.nick regClient
+                cleanup s   = do
+                    let nc = IM.delete uid (Env.clients s)
+                    return $ case IM.lookup uid (Env.clients s) of
+                        Just (Client.Client {Client.nick=Just n}) -> s {Env.clients=nc, Env.uids=nu}
+                          where nu = M.delete (map toUpper n) (Env.uids s)
+                        _ -> s {Env.clients=nc}
+            Nothing -> sendClient client $ "ERROR :Closing Link " ++ host ++ " (Connection timed out)"
     tryIOError $ hClose handle
     return ()
   where
     Just sharedM = Env.shared env
     Env.Env {Env.options=Opts.Options {Opts.connectTimeout=connectTimeout}} = env
-    client = Env.client env
-    Just handle = Client.handle client
+    baseClient = Env.client env
+    Just handle = Client.handle baseClient
 
 registerClient :: Env.Env -> IO Env.Env
 registerClient env = do
-    let newClients = IM.insert uid client (Env.clients local)
-        newUids = case maybeNick of
-            Just nick -> case IM.lookup uid (Env.clients local) of
-                Just Client.Client {Client.nick=Just oldNick}
-                    -> M.insert (map toUpper nick) uid $ M.delete (map toUpper oldNick) (Env.uids local)
-                _   -> M.insert (map toUpper nick) uid (Env.uids local)
-            Nothing -> Env.uids local
-    putMVar sharedM local {Env.clients=newClients, Env.uids=newUids}
     line <- hGetLine handle
-    shared <- takeMVar sharedM
-    let localEnv = env {Env.local=shared}
-
     let msg = parseMessage line
-    case M.lookup (command msg) (Env.handlers localEnv) of
+    case M.lookup (command msg) (Env.handlers env) of
         Just handler -> do
-            newEnv <- handler localEnv msg
+            newEnv <- handler env msg
             case isClientReady (Env.client newEnv) of
                 True    -> return newEnv
                 False   -> registerClient newEnv
-        Nothing -> registerClient localEnv
-  where
-    Just sharedM = Env.shared env
-    local = Env.local env
-    client = Env.client env
-    Just handle = Client.handle (Env.client env)
-    Just uid = Client.uid client
-    maybeNick = Client.nick client
+        Nothing -> registerClient env
+  where Just handle = Client.handle (Env.client env)
 
 loopClient :: Env.Env -> Bool -> IO ()
 loopClient env pinged = do
@@ -167,30 +159,39 @@ loopClient env pinged = do
 
 handleLine :: Env.Env -> IO Env.Env
 handleLine env = do
-    let newClients = IM.insert uid client (Env.clients local)
-        newUids = case IM.lookup uid (Env.clients local) of
-            Just Client.Client {Client.nick=Just oldNick}
-                -> M.insert (map toUpper nick) uid $ M.delete (map toUpper oldNick) (Env.uids local)
-            _   -> M.insert (map toUpper nick) uid (Env.uids local)
-    putMVar sharedM local {Env.clients=newClients, Env.uids=newUids}
     line <- hGetLine handle
-    shared <- takeMVar sharedM
-    let localEnv = env {Env.local=shared}
-
     let msg = parseMessage line
-    case M.lookup (command msg) (Env.handlers localEnv) of
-        Just handler -> handler localEnv msg
+        cmd = command msg
+    case M.lookup cmd (Env.handlers env) of
+        Just h  -> modifyMVar sharedM process
+          where process s = do
+                    newEnv <- h locEnv msg
+                    let newClient   = Env.client newEnv
+                        Just nick   = Client.nick newClient
+                        nickUpper   = map toUpper nick
+                        newClients  = IM.insert uid newClient (Env.clients s)
+                        newUids     = case IM.lookup uid (Env.clients s) of
+                            Just Client.Client {Client.nick=Just oldNick}
+                                -> M.insert nickUpper uid $ M.delete (map toUpper oldNick) (Env.uids s)
+                            _   -> M.insert nickUpper uid (Env.uids s)
+                    return (s {Env.clients=newClients, Env.uids=newUids}, newEnv)
+                  where locEnv = env {Env.local=s}
         Nothing -> do
-            sendNumeric localEnv numERR_UNKNOWNCOMMAND [command msg, "Unknown command"]
-            handleLine localEnv
+            sendNumeric env numERR_UNKNOWNCOMMAND [cmd, "Unknown command"]
+            return env
   where
-    Just sharedM = Env.shared env
-    local = Env.local env
-    client = Env.client env
-    Just handle = Client.handle client
-    Just uid = Client.uid client
-    Just nick = Client.nick client
-    -- force thread crash if Nothing which should never happen here
+    Just sharedM    = Env.shared env
+    client          = Env.client env
+    Just handle     = Client.handle client -- force thread crash if handle is Nothing
+    Just uid        = Client.uid client
 
 toMicro :: Num a => a -> a
 toMicro = (*1000000)
+
+firstAvailable :: (Eq a, Enum a, Num a) => [a] -> a
+firstAvailable = f 1
+  where
+    f n (x:xs)
+        | n == x    = f (succ n) xs
+        | otherwise = n
+    f n _ = n
