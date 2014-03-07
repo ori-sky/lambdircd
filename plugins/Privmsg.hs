@@ -34,14 +34,16 @@ plugin = defaultPlugin
 privmsg :: CommandHandler
 privmsg env (Message _ _ (target:text:_))
     | Client.registered client = do
-        if M.member targetUpper (Env.uids local)
-            then do
-                let targetClient = Env.clients local IM.! (Env.uids local M.! targetUpper)
-                let msg = ':' : show (clientToMask client) ++ " PRIVMSG " ++ target ++ " :" ++ text
-                if Client.registered targetClient
-                    then sendClient targetClient msg
-                    else sendNumeric env numERR_NOSUCHNICK [target, "No such nick/channel"]
-            else sendNumeric env numERR_NOSUCHNICK [target, "No such nick/channel"]
+        if head target == '#'
+            then return ()
+            else if M.member targetUpper (Env.uids local)
+                then do
+                    let targetClient = Env.clients local IM.! (Env.uids local M.! targetUpper)
+                    let msg = ':' : show (clientToMask client) ++ " PRIVMSG " ++ target ++ " :" ++ text
+                    if Client.registered targetClient
+                        then sendClient targetClient msg
+                        else sendNumeric env numERR_NOSUCHNICK [target, "No such nick/channel"]
+                else sendNumeric env numERR_NOSUCHNICK [target, "No such nick/channel"]
         return env
     | otherwise = return env
   where
