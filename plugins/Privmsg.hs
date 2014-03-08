@@ -20,8 +20,9 @@ import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (whenRegistered, clientToMask, sendClient)
+import IRC.Server.Client (clientToMask, sendClient)
 import qualified IRC.Server.Client as Client
+import IRC.Server.Environment (whenRegistered)
 import qualified IRC.Server.Environment as Env
 import Plugin
 
@@ -33,7 +34,7 @@ plugin = defaultPlugin
 
 privmsg :: CommandHandler
 privmsg env (Message _ _ (('#':cs):text:_)) = return env
-privmsg env (Message _ _ (target:text:_)) = whenRegistered client env $ do
+privmsg env (Message _ _ (target:text:_)) = whenRegistered env $ do
     if M.member targetUpper (Env.uids local)
         then do
             let targetClient = Env.clients local IM.! (Env.uids local M.! targetUpper)
@@ -47,11 +48,9 @@ privmsg env (Message _ _ (target:text:_)) = whenRegistered client env $ do
     targetUpper = map toUpper target
     local = Env.local env
     client = Env.client env
-privmsg env (Message _ _ (_:[])) = whenRegistered client env $ do
+privmsg env (Message _ _ (_:[])) = whenRegistered env $ do
     sendNumeric env numERR_NOTEXTTOSEND ["No text to send"]
     return env
-  where client = Env.client env
-privmsg env _ = whenRegistered client env $ do
+privmsg env _ = whenRegistered env $ do
     sendNumeric env numERR_NORECIPIENT ["No recipient given (PRIVMSG)"]
     return env
-  where client = Env.client env

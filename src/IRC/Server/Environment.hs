@@ -49,3 +49,7 @@ defaultEnv = Env
     , shared    = Nothing
     , local     = defaultShared
     }
+
+whenRegistered :: Env -> IO Env -> IO Env
+whenRegistered env = whenClientRegistered cli env
+  where cli = client env

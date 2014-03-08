@@ -42,8 +42,8 @@ defaultClient = Client
     , registered    = False
     }
 
-whenRegistered :: Client -> a -> IO a -> IO a
-whenRegistered client x io
+whenClientRegistered :: Client -> a -> IO a -> IO a
+whenClientRegistered client x io
     | registered client = io
     | otherwise = return x
 

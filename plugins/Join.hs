@@ -17,16 +17,17 @@ module Join where
 
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (whenRegistered, sendClient)
+import IRC.Server.Client (sendClient)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Options as Opts
+import IRC.Server.Environment (whenRegistered)
 import qualified IRC.Server.Environment as Env
 import Plugin
 
 plugin = defaultPlugin {handlers=[("JOIN", join)]}
 
 join :: CommandHandler
-join env (Message _ _ (chan:_)) = whenRegistered client env $ if c == '#'
+join env (Message _ _ (chan:_)) = whenRegistered env $ if c == '#'
     then if notElem chan channels
         then if length channels < maxChans
             then do
@@ -49,7 +50,6 @@ join env (Message _ _ (chan:_)) = whenRegistered client env $ if c == '#'
     Just nick = Client.nick client
     channels = Client.channels client
     c:_ = chan
-join env _ = whenRegistered client env $ do
+join env _ = whenRegistered env $ do
     sendNumeric env numERR_NEEDMOREPARAMS ["JOIN", "Not enough parameters"]
     return env
-  where client = Env.client env
