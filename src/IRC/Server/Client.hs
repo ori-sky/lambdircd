@@ -42,6 +42,11 @@ defaultClient = Client
     , registered    = False
     }
 
+whenRegistered :: Client -> a -> IO a -> IO a
+whenRegistered client x io
+    | registered client = io
+    | otherwise = return x
+
 isClientReady :: Client -> Bool
 isClientReady client =
     isJust (nick client) &&

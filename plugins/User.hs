@@ -33,8 +33,7 @@ user env (Message _ _ (user:_:_:realname:_))
         sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
         return env
     | otherwise = return env {Env.client=client {Client.user=Just user, Client.realName=Just realname}}
-  where
-    client = Env.client env
+  where client = Env.client env
 user env _
     | Client.registered client = do
         sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
@@ -42,5 +41,4 @@ user env _
     | otherwise = do
         sendNumeric env numERR_NEEDMOREPARAMS ["USER", "Not enough parameters"]
         return env
-  where
-    client = Env.client env
+  where client = Env.client env

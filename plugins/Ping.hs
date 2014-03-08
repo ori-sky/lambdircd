@@ -35,4 +35,3 @@ ping env (Message _ _ (server1:_)) = do
 ping env _ = do
     sendNumeric env numERR_NEEDMOREPARAMS ["PING", "Not enough parameters"]
     return env
-  where
