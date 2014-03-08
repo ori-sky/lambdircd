@@ -27,29 +27,28 @@ import Plugin
 plugin = defaultPlugin {handlers=[("JOIN", join)]}
 
 join :: CommandHandler
-join env (Message _ _ (chan:_)) = whenRegistered env $ if c == '#'
-    then if notElem chan channels
-        then if length channels < maxChans
-            then do
-                sendClient client $ ":" ++ nick ++ " JOIN " ++ chan
-                sendNumeric env numRPL_NAMREPLY ["=", chan, nick]
-                sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
-                return env {Env.client=client {Client.channels=chan:channels}}
-            else do
-                sendNumeric env numERR_TOOMANYCHANNELS [chan, "You have joined too many channels"]
-                return env
+join env (Message _ _ (('#':cs):_)) = whenRegistered env $ if notElem chan channels
+    then if length channels < maxChans
+        then do
+            sendClient client $ ":" ++ nick ++ " JOIN " ++ chan
+            sendNumeric env numRPL_NAMREPLY ["=", chan, nick]
+            sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
+            return env {Env.client=client {Client.channels=chan:channels}}
         else do
-            sendNumeric env numERR_USERONCHANNEL [nick, chan, "is already on channel"]
+            sendNumeric env numERR_TOOMANYCHANNELS [chan, "You have joined too many channels"]
             return env
     else do
-        sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"]
+        sendNumeric env numERR_USERONCHANNEL [nick, chan, "is already on channel"]
         return env
   where
+    chan = '#' : cs
     Opts.Options {Opts.maxChannels=maxChans} = Env.options env
     client = Env.client env
     Just nick = Client.nick client
     channels = Client.channels client
-    c:_ = chan
+join env (Message _ _ (chan:_)) = whenRegistered env $ do
+    sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"]
+    return env
 join env _ = whenRegistered env $ do
     sendNumeric env numERR_NEEDMOREPARAMS ["JOIN", "Not enough parameters"]
     return env
