@@ -166,7 +166,8 @@ handleLine env = do
         Just h  -> modifyMVar sharedM process
           where process s = do
                     newEnv <- h locEnv msg
-                    let newClient   = Env.client newEnv
+                    let newLocal    = Env.local newEnv
+                        newClient   = Env.client newEnv
                         Just nick   = Client.nick newClient
                         nickUpper   = map toUpper nick
                         newClients  = IM.insert uid newClient (Env.clients s)
@@ -174,7 +175,7 @@ handleLine env = do
                             Just Client.Client {Client.nick=Just oldNick}
                                 -> M.insert nickUpper uid $ M.delete (map toUpper oldNick) (Env.uids s)
                             _   -> M.insert nickUpper uid (Env.uids s)
-                    return (s {Env.clients=newClients, Env.uids=newUids}, newEnv)
+                    return (newLocal {Env.clients=newClients, Env.uids=newUids}, newEnv)
                   where locEnv = env {Env.local=s}
         Nothing -> do
             sendNumeric env numERR_UNKNOWNCOMMAND [cmd, "Unknown command"]
