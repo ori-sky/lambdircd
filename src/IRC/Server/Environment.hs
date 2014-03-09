@@ -20,12 +20,13 @@ import qualified Data.IntMap as IM
 import Control.Concurrent.MVar
 import IRC.Message (Message(..))
 import IRC.Server.Client hiding (channels)
+import qualified IRC.Server.Channel as Chan
 import qualified IRC.Server.Options as Opts
 
 data Shared = Shared
     { clients   :: IM.IntMap Client
     , uids      :: M.Map String Int
-    , channels  :: M.Map String [Int]
+    , channels  :: M.Map String Chan.Channel
     }
 
 defaultShared :: Shared

@@ -21,6 +21,7 @@ import IRC.Numeric
 import IRC.Server.Client (sendClient)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Options as Opts
+import qualified IRC.Server.Channel as Chan
 import IRC.Server.Environment (whenRegistered)
 import qualified IRC.Server.Environment as Env
 import Plugin
@@ -32,9 +33,8 @@ join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ if notElem chan c
     then if length channels < maxChans
         then do
             let newChans = if M.member chan locChans
-                then M.adjust (\xs -> uid:xs) chan locChans
-                else M.insert chan [uid] locChans
-            sendNumeric env (Numeric 0) [show newChans]
+                then M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=uid:us}) chan locChans
+                else M.insert chan (Chan.Channel chan [uid]) locChans
             sendClient client $ ":" ++ nick ++ " JOIN " ++ chan
             sendNumeric env numRPL_NAMREPLY ["=", chan, nick]
             sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]

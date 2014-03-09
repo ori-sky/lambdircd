@@ -18,31 +18,23 @@ module Privmsg where
 import Data.Char (toUpper)
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
-import Control.Monad (unless)
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (clientToMask, sendClient, sendClientFrom)
+import IRC.Server.Client (clientToMask, sendClient)
 import qualified IRC.Server.Client as Client
+import IRC.Server.Channel.Helper
 import IRC.Server.Environment (whenRegistered)
 import qualified IRC.Server.Environment as Env
 import Plugin
 
-plugin = defaultPlugin
-    { handlers =
-        [ ("PRIVMSG", privmsg)
-        ]
-    }
+plugin = defaultPlugin {handlers=[("PRIVMSG", privmsg)]}
 
 privmsg :: CommandHandler
 privmsg env (Message _ _ (chan@('#':_):text:_)) = whenRegistered env $ do
     if M.member chan locChans
         then if elem chan channels
-            then do
-                let f u = unless (u == uid) $ sendClientFrom h c $ "PRIVMSG " ++ chan ++ " :" ++ text
-                      where
-                        c = Env.clients local IM.! u
-                        h = show (clientToMask client)
-                mapM_ f (locChans M.! chan)
+            then sendChannelOthersFromClient client env (locChans M.! chan) $
+                "PRIVMSG " ++ chan ++ " :" ++ text
             else sendNumeric env numERR_CANNOTSENDTOCHAN [chan, "Cannot send to channel"]
         else sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"]
     return env
@@ -50,7 +42,6 @@ privmsg env (Message _ _ (chan@('#':_):text:_)) = whenRegistered env $ do
     local = Env.local env
     locChans = Env.channels local
     client = Env.client env
-    Just uid = Client.uid client
     channels = Client.channels client
 privmsg env (Message _ _ (target:text:_)) = whenRegistered env $ do
     if M.member targetUpper (Env.uids local)
