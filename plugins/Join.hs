@@ -40,6 +40,7 @@ join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ if notElem chan c
                     else M.insert chan (Chan.Channel chan [uid]) locChans
                 nicks = map (fromMaybe "*" . Client.nick . (clients IM.!)) $ Chan.uids (newChans M.! chan)
             sendClient client $ ":" ++ nick ++ " JOIN " ++ chan
+            sendChannelOthersFromClient client env (newChans M.! chan) $ "JOIN " ++ chan
             sendNumeric env numRPL_NAMREPLY ["=", chan, unwords nicks]
             sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
             return env
