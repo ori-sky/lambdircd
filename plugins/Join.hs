@@ -15,6 +15,7 @@
 
 module Join where
 
+import qualified Data.Map as M
 import IRC.Message
 import IRC.Numeric
 import IRC.Server.Client (sendClient)
@@ -30,10 +31,17 @@ join :: CommandHandler
 join env (Message _ _ (('#':cs):_)) = whenRegistered env $ if notElem chan channels
     then if length channels < maxChans
         then do
+            let newChans = if M.member chan locChans
+                then M.adjust (\xs -> uid:xs) chan locChans
+                else M.insert chan [uid] locChans
+            sendNumeric env (Numeric 0) [show newChans]
             sendClient client $ ":" ++ nick ++ " JOIN " ++ chan
             sendNumeric env numRPL_NAMREPLY ["=", chan, nick]
             sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
-            return env {Env.client=client {Client.channels=chan:channels}}
+            return env
+                { Env.client=client {Client.channels=chan:channels}
+                , Env.local=local {Env.channels=newChans}
+                }
         else do
             sendNumeric env numERR_TOOMANYCHANNELS [chan, "You have joined too many channels"]
             return env
@@ -43,11 +51,14 @@ join env (Message _ _ (('#':cs):_)) = whenRegistered env $ if notElem chan chann
   where
     chan = '#' : cs
     Opts.Options {Opts.maxChannels=maxChans} = Env.options env
+    local = Env.local env
+    locChans = Env.channels local
     client = Env.client env
     Just nick = Client.nick client
+    Just uid = Client.uid client
     channels = Client.channels client
 join env (Message _ _ (chan:_)) = whenRegistered env $ do
-    sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"]
+    sendNumeric env numERR_BADCHANNAME [chan, "Illegal channel name"]
     return env
 join env _ = whenRegistered env $ do
     sendNumeric env numERR_NEEDMOREPARAMS ["JOIN", "Not enough parameters"]
