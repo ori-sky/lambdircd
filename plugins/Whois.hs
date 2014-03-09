@@ -46,6 +46,7 @@ whois env (Message _ _ (target:[])) = whenRegistered env $ do
                 Just user = Client.user targetClient
                 Just host = Client.host targetClient
                 Just real = Client.realName targetClient
+                channels = Client.channels targetClient
             sendNumeric env numRPL_WHOISUSER [nick, user, host, "*", real]
             unless (null channels) $ sendNumeric env numRPL_WHOISCHANNELS [nick, unwords channels]
             sendNumeric env numRPL_ENDOFWHOIS [nick, "End of /WHOIS list"]
@@ -54,8 +55,6 @@ whois env (Message _ _ (target:[])) = whenRegistered env $ do
   where
     targetUpper = map toUpper target
     local = Env.local env
-    client = Env.client env
-    channels = Client.channels client
 whois env _ = whenRegistered env $ do
     sendNumeric env numERR_NEEDMOREPARAMS ["WHOIS", "Not enough parameters"]
     return env
