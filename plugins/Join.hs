@@ -28,7 +28,7 @@ import Plugin
 plugin = defaultPlugin {handlers=[("JOIN", join)]}
 
 join :: CommandHandler
-join env (Message _ _ (('#':cs):_)) = whenRegistered env $ if notElem chan channels
+join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ if notElem chan channels
     then if length channels < maxChans
         then do
             let newChans = if M.member chan locChans
@@ -49,7 +49,6 @@ join env (Message _ _ (('#':cs):_)) = whenRegistered env $ if notElem chan chann
         sendNumeric env numERR_USERONCHANNEL [nick, chan, "is already on channel"]
         return env
   where
-    chan = '#' : cs
     Opts.Options {Opts.maxChannels=maxChans} = Env.options env
     local = Env.local env
     locChans = Env.channels local

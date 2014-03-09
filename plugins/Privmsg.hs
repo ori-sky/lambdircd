@@ -34,7 +34,7 @@ plugin = defaultPlugin
     }
 
 privmsg :: CommandHandler
-privmsg env (Message _ _ (('#':cs):text:_)) = whenRegistered env $ do
+privmsg env (Message _ _ (chan@('#':_):text:_)) = whenRegistered env $ do
     if M.member chan locChans
         then if elem chan channels
             then do
@@ -47,7 +47,6 @@ privmsg env (Message _ _ (('#':cs):text:_)) = whenRegistered env $ do
         else sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"]
     return env
   where
-    chan = '#' : cs
     local = Env.local env
     locChans = Env.channels local
     client = Env.client env
