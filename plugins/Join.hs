@@ -15,13 +15,16 @@
 
 module Join where
 
+import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
+import qualified Data.IntMap as IM
 import IRC.Message
 import IRC.Numeric
 import IRC.Server.Client (sendClient)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Options as Opts
 import qualified IRC.Server.Channel as Chan
+import IRC.Server.Channel.Helper
 import IRC.Server.Environment (whenRegistered)
 import qualified IRC.Server.Environment as Env
 import Plugin
@@ -33,10 +36,11 @@ join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ if notElem chan c
     then if length channels < maxChans
         then do
             let newChans = if M.member chan locChans
-                then M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=uid:us}) chan locChans
-                else M.insert chan (Chan.Channel chan [uid]) locChans
+                    then M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=uid:us}) chan locChans
+                    else M.insert chan (Chan.Channel chan [uid]) locChans
+                nicks = map (fromMaybe "*" . Client.nick . (clients IM.!)) $ Chan.uids (newChans M.! chan)
             sendClient client $ ":" ++ nick ++ " JOIN " ++ chan
-            sendNumeric env numRPL_NAMREPLY ["=", chan, nick]
+            sendNumeric env numRPL_NAMREPLY ["=", chan, unwords nicks]
             sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
             return env
                 { Env.client=client {Client.channels=chan:channels}
@@ -51,6 +55,7 @@ join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ if notElem chan c
   where
     Opts.Options {Opts.maxChannels=maxChans} = Env.options env
     local = Env.local env
+    clients = Env.clients local
     locChans = Env.channels local
     client = Env.client env
     Just nick = Client.nick client
