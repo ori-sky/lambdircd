@@ -57,8 +57,8 @@ serveIRC env = withSocketsDo $ do
     acceptLoop sock newEnv
   where
     cp = Env.config env
-    pluginNames = words $ getConfigString cp "DEFAULT" "plugins"
-    port = getConfigInt cp "DEFAULT" "port"
+    pluginNames = words $ getConfigString cp "plugins" "load"
+    port = getConfigInt cp "listen" "port"
 
 acceptLoop :: Socket -> Env.Env-> IO ()
 acceptLoop sock env = do
@@ -130,7 +130,7 @@ serveClient env sockAddr = do
     return ()
   where
     Just sharedM = Env.shared env
-    connectTimeout = getConfigInt (Env.config env) "DEFAULT" "connect_timeout"
+    connectTimeout = getConfigInt (Env.config env) "client" "connect_timeout"
     baseClient = Env.client env
     Just handle = Client.handle baseClient
 
@@ -157,7 +157,7 @@ loopClient env pinged = do
             False       -> sendClient client "PING :lambdircd"
                             >> loopClient env True
   where
-    pingTimeout = getConfigInt (Env.config env) "DEFAULT" "ping_timeout"
+    pingTimeout = getConfigInt (Env.config env) "client" "ping_timeout"
     client = Env.client env
 
 handleLine :: Env.Env -> IO Env.Env

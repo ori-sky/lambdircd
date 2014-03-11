@@ -32,12 +32,17 @@ data Config = Config
 
 defaultCP :: ConfigParser
 defaultCP = forceEither $ return emptyCP
-    >>= s "plugins"             ""
-    >>= s "port"                "6667"
-    >>= s "connect_timeout"     "30"
-    >>= s "ping_timeout"        "240"
-    >>= s "max_channels"        "5"
-  where s = set "DEFAULT"
+    >>= add_section "info"
+    >>= set "info"      "name"      "lambdircd"
+    >>= set "info"      "network"   "LambdaNet"
+    >>= add_section "listen"
+    >>= set "listen"    "port"  "6667"
+    >>= add_section "client"
+    >>= set "client"    "connect_timeout"   "20"
+    >>= set "client"    "ping_timeout"      "240"
+    >>= set "client"    "max_channels"      "5"
+    >>= add_section "plugins"
+    >>= set "plugins"   "load"  ""
 
 loadConfig :: String -> IO ConfigParser
 loadConfig path = do

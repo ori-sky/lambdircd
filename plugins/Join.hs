@@ -55,7 +55,7 @@ join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ do
             sendNumeric env numERR_USERONCHANNEL [nick, chan, "is already on channel"]
             return env
   where
-    maxChans = getConfigInt (Env.config env) "DEFAULT" "max_channels"
+    maxChans = getConfigInt (Env.config env) "client" "max_channels"
     local = Env.local env
     clients = Env.clients local
     locChans = Env.channels local
