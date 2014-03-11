@@ -17,6 +17,7 @@ module IRC.Server.Client where
 
 import Data.Maybe
 import System.IO
+import System.IO.Error
 import qualified IRC.Hostmask as H
 
 data Client = Client
@@ -64,7 +65,8 @@ clientToMask client = H.Hostmask n u h
 
 sendClient :: Client -> String -> IO ()
 sendClient client message = do
-    hPutStr handle' $ message ++ "\r\n"
+    tryIOError $ hPutStr handle' $ message ++ "\r\n"
+    return ()
   where Just handle' = handle client
 
 sendClientFrom :: String -> Client -> String -> IO ()

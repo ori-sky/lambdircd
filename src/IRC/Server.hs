@@ -95,10 +95,39 @@ serveClient env sockAddr = do
         maybeEnv <- timeout (toMicro connectTimeout) $ registerClient env {Env.client=client, Env.local=shared}
         case maybeEnv of
             Just newEnv -> do
-                shared <- takeMVar sharedM
+                newShared <- takeMVar sharedM
+                let clients     = Env.clients newShared
+                    uids        = Env.uids newShared
+                    uid         = firstAvailable $ sort (IM.keys clients)
+                    regClient   = (Env.client newEnv) {Cli.uid=Just uid, Cli.registered=True}
+                    regEnv      = newEnv {Env.client=regClient}
+                    newClients  = IM.insert uid regClient clients
+                    newUids     = M.insert (map toUpper nick) uid uids
+                    Just nick   = Cli.nick regClient
+                    cleanup s   = do
+                        forM_ (map (finClients IM.!) uniqUids) $ \c ->
+                            sendClientFrom (show $ clientToMask finClient) c $ "QUIT :" ++ case maybeReason of
+                                Just reason -> reason
+                                Nothing     -> "Client Quit"
+                        return $ case IM.lookup uid (Env.clients s) of
+                            Just (Cli.Client {Cli.nick=Just n})
+                                -> s {Env.clients=finClients, Env.uids=finUids, Env.channels=finChans}
+                              where finUids = M.delete (map toUpper n) (Env.uids s)
+                            _   -> s {Env.clients=finClients, Env.channels=finChans}
+                      where
+                        finClients = IM.delete uid (Env.clients s)
+                        finClient = (Env.clients s) IM.! uid
+                        maybeReason = Cli.quitReason finClient
+                        locChans = Env.channels s
+                        cliChans = Cli.channels finClient
+                        finChans = M.mapWithKey f locChans
+                        f name channel = if elem name cliChans
+                            then channel {Chan.uids=delete uid (Chan.uids channel)}
+                            else channel
+                        uniqUids = nub $ concatMap Chan.uids $ map (finChans M.!) cliChans
                 if M.notMember (map toUpper nick) uids
                     then do
-                        putMVar sharedM shared {Env.clients=newClients, Env.uids=newUids}
+                        putMVar sharedM newShared {Env.clients=newClients, Env.uids=newUids}
                         sendNumeric regEnv numRPL_WELCOME   ["Welcome to "++networkName++" " ++ nick]
                         sendNumeric regEnv numRPL_YOURHOST  ["Your host is "++serverName++", running lambdircd"]
                         sendNumeric regEnv numRPL_CREATED   ["This server was created (Just now)"]
@@ -109,39 +138,9 @@ serveClient env sockAddr = do
                         tryIOError $ loopClient regEnv False
                         modifyMVar_ sharedM cleanup
                     else do
-                        putMVar sharedM shared
+                        putMVar sharedM newShared
                         sendNumeric regEnv numERR_NICKCOLLISION [nick, "Nickname collision KILL"]
                         sendClient regClient $ "ERROR :Closing Link " ++ host ++ " (Nickname collision KILL)"
-              where
-                clients     = Env.clients shared
-                uids        = Env.uids shared
-                uid         = firstAvailable $ sort (IM.keys clients)
-                regClient   = (Env.client newEnv) {Cli.uid=Just uid, Cli.registered=True}
-                regEnv      = newEnv {Env.client=regClient}
-                newClients  = IM.insert uid regClient clients
-                newUids     = M.insert (map toUpper nick) uid uids
-                Just nick   = Cli.nick regClient
-                cleanup s   = do
-                    forM_ (map (finClients IM.!) uniqUids) $ \c ->
-                        sendClientFrom (show $ clientToMask finClient) c $ "QUIT :" ++ case maybeReason of
-                            Just reason -> reason
-                            Nothing     -> "Client Quit"
-                    return $ case IM.lookup uid (Env.clients s) of
-                        Just (Cli.Client {Cli.nick=Just n})
-                            -> s {Env.clients=finClients, Env.uids=finUids, Env.channels=finChans}
-                          where finUids = M.delete (map toUpper n) (Env.uids s)
-                        _   -> s {Env.clients=finClients, Env.channels=finChans}
-                  where
-                    finClients = IM.delete uid (Env.clients s)
-                    finClient = (Env.clients s) IM.! uid
-                    maybeReason = Cli.quitReason finClient
-                    locChans = Env.channels s
-                    cliChans = Cli.channels finClient
-                    finChans = M.mapWithKey f locChans
-                    f name channel = if elem name cliChans
-                        then channel {Chan.uids=delete uid (Chan.uids channel)}
-                        else channel
-                    uniqUids = nub $ concatMap Chan.uids $ map (finChans M.!) cliChans
             Nothing -> sendClient client $ "ERROR :Closing Link " ++ host ++ " (Connection timed out)"
     tryIOError $ hClose handle
     return ()
