@@ -61,6 +61,7 @@ numERR_UNKNOWNCOMMAND       = Numeric 421
 numERR_NONICKNAMEGIVEN      = Numeric 431
 numERR_NICKNAMEINUSE        = Numeric 433
 numERR_NICKCOLLISION        = Numeric 436
+numERR_NOTONCHANNEL         = Numeric 442
 numERR_USERONCHANNEL        = Numeric 443
 numERR_NEEDMOREPARAMS       = Numeric 461
 numERR_ALREADYREGISTERED    = Numeric 462

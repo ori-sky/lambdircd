@@ -22,6 +22,20 @@ import qualified IRC.Server.Client as Client
 import IRC.Server.Channel
 import qualified IRC.Server.Environment as Env
 
+sendChannel :: Env.Env -> Channel -> String -> IO ()
+sendChannel env chan msg = mapM_ f (uids chan)
+  where
+    local = Env.local env
+    f u = sendClient c msg
+      where c = Env.clients local IM.! u
+
+sendChannelFrom :: String -> Env.Env -> Channel -> String -> IO ()
+sendChannelFrom src env chan msg = sendChannel env chan newMsg
+  where newMsg = ':' : src ++ ' ' : msg
+
+sendChannelFromClient :: Client.Client -> Env.Env -> Channel -> String -> IO ()
+sendChannelFromClient cli = sendChannelFrom $ show (clientToMask cli)
+
 sendChannelOthers :: Env.Env -> Channel -> String -> IO ()
 sendChannelOthers env chan msg = mapM_ f (uids chan)
   where
