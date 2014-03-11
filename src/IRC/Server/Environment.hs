@@ -21,7 +21,7 @@ import Control.Concurrent.MVar
 import IRC.Message (Message(..))
 import IRC.Server.Client hiding (channels)
 import qualified IRC.Server.Channel as Chan
-import qualified IRC.Server.Options as Opts
+import Data.ConfigFile.Monadic
 
 data Shared = Shared
     { clients   :: IM.IntMap Client
@@ -37,7 +37,7 @@ defaultShared = Shared
     }
 
 data Env = Env
-    { options   :: Opts.Options
+    { config    :: ConfigParser
     , client    :: Client
     , handlers  :: M.Map String (Env -> Message -> IO Env)
     , shared    :: Maybe (MVar Shared)
@@ -46,7 +46,7 @@ data Env = Env
 
 defaultEnv :: Env
 defaultEnv = Env
-    { options   = Opts.defaultOptions
+    { config    = emptyCP
     , client    = defaultClient
     , handlers  = M.empty
     , shared    = Nothing

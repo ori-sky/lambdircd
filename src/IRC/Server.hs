@@ -33,9 +33,9 @@ import IRC.Message
 import IRC.Numeric
 import IRC.Server.Client (defaultClient, isClientReady, sendClient)
 import qualified IRC.Server.Client as Client
-import qualified IRC.Server.Options as Opts
 import qualified IRC.Server.Environment as Env
 import qualified Plugin as P
+import Config
 import Plugin.Load
 
 serveIRC :: Env.Env -> IO ()
@@ -51,11 +51,14 @@ serveIRC env = withSocketsDo $ do
      - only supported on GNU systems
      -}
     tryIOError $ setSocketOption sock (CustomSockOpt (6, 9)) 30
-    bindSocket sock (SockAddrInet port iNADDR_ANY)
+    bindSocket sock $ SockAddrInet (fromIntegral port) iNADDR_ANY
     listen sock 5
 
     acceptLoop sock newEnv
-  where Env.Env {Env.options=Opts.Options {Opts.plugins=pluginNames, Opts.port=port}} = env
+  where
+    cp = Env.config env
+    pluginNames = words $ getConfigString cp "DEFAULT" "plugins"
+    port = getConfigInt cp "DEFAULT" "port"
 
 acceptLoop :: Socket -> Env.Env-> IO ()
 acceptLoop sock env = do
@@ -127,7 +130,7 @@ serveClient env sockAddr = do
     return ()
   where
     Just sharedM = Env.shared env
-    Opts.Options {Opts.connectTimeout=connectTimeout} = Env.options env
+    connectTimeout = getConfigInt (Env.config env) "DEFAULT" "connect_timeout"
     baseClient = Env.client env
     Just handle = Client.handle baseClient
 
@@ -154,7 +157,7 @@ loopClient env pinged = do
             False       -> sendClient client "PING :lambdircd"
                             >> loopClient env True
   where
-    pingTimeout = Opts.pingTimeout (Env.options env)
+    pingTimeout = getConfigInt (Env.config env) "DEFAULT" "ping_timeout"
     client = Env.client env
 
 handleLine :: Env.Env -> IO Env.Env

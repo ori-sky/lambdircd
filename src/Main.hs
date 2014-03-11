@@ -14,21 +14,10 @@
  -}
 
 import IRC.Server as IRCD
-import IRC.Server.Options
 import IRC.Server.Environment
+import Config
 
 main :: IO ()
-main = serveIRC defaultEnv
-    { options = defaultOptions
-        { plugins =
-            [ "Ping"
-            , "Pong"
-            , "Nick"
-            , "User"
-            , "Join"
-            , "Privmsg"
-            , "Whois"
-            , "Num"
-            ]
-        }
-    }
+main = do
+    cp <- loadConfig "ircd.conf"
+    serveIRC defaultEnv {config=cp}
