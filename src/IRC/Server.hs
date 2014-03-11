@@ -97,10 +97,10 @@ serveClient env sockAddr = do
                 if M.notMember (map toUpper nick) uids
                     then do
                         putMVar sharedM shared {Env.clients=newClients, Env.uids=newUids}
-                        sendNumeric regEnv numRPL_WELCOME   ["Welcome to lambdircd " ++ nick]
-                        sendNumeric regEnv numRPL_YOURHOST  ["Your host is lambdircd, running lambdircd"]
+                        sendNumeric regEnv numRPL_WELCOME   ["Welcome to "++networkName++" " ++ nick]
+                        sendNumeric regEnv numRPL_YOURHOST  ["Your host is "++serverName++", running lambdircd"]
                         sendNumeric regEnv numRPL_CREATED   ["This server was created (Just now)"]
-                        sendNumeric regEnv numRPL_MOTDSTART ["- lambdircd Message of the Day -"]
+                        sendNumeric regEnv numRPL_MOTDSTART ["- "++serverName++" Message of the Day -"]
                         sendNumeric regEnv numRPL_MOTD      ["- Welcome to lambdircd"]
                         sendNumeric regEnv numRPL_ENDOFMOTD ["End of /MOTD command"]
                         sendNumeric regEnv (Numeric 0) ["Your host is `" ++ host ++ "`"]
@@ -130,7 +130,10 @@ serveClient env sockAddr = do
     return ()
   where
     Just sharedM = Env.shared env
-    connectTimeout = getConfigInt (Env.config env) "client" "connect_timeout"
+    cp = Env.config env
+    serverName = getConfigString cp "info" "name"
+    networkName = getConfigString cp "info" "network"
+    connectTimeout = getConfigInt cp "client" "connect_timeout"
     baseClient = Env.client env
     Just handle = Client.handle baseClient
 
@@ -154,10 +157,11 @@ loopClient env pinged = do
         Just newEnv -> loopClient newEnv False
         Nothing     -> case pinged of
             True        -> return ()
-            False       -> sendClient client "PING :lambdircd"
-                            >> loopClient env True
+            False       -> sendClient client ("PING :"++serverName) >> loopClient env True
   where
-    pingTimeout = getConfigInt (Env.config env) "client" "ping_timeout"
+    cp = Env.config env
+    serverName = getConfigString cp "info" "name"
+    pingTimeout = getConfigInt cp "client" "ping_timeout"
     client = Env.client env
 
 handleLine :: Env.Env -> IO Env.Env

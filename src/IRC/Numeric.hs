@@ -19,8 +19,9 @@ import Data.Word (Word16)
 import Data.Maybe (fromMaybe)
 import IRC.Server.Environment (Env)
 import IRC.Server.Client (sendClient)
-import qualified IRC.Server.Environment as Env (client)
+import qualified IRC.Server.Environment as Env
 import qualified IRC.Server.Client as Client (nick)
+import Config
 
 data Numeric = Numeric Word16
 
@@ -32,8 +33,9 @@ instance Show Numeric where
 
 sendNumeric :: Env -> Numeric -> [String] -> IO ()
 sendNumeric env numeric params = sendClient client $
-    unwords $ [":lambdircd", show numeric, nick] ++ init params ++ [':' : last params]
+    unwords $ [':' : serverName, show numeric, nick] ++ init params ++ [':' : last params]
   where
+    serverName = getConfigString (Env.config env) "info" "name"
     client = Env.client env
     nick = fromMaybe "*" (Client.nick client)
 
