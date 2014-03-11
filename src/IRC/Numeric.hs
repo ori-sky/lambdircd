@@ -43,6 +43,7 @@ numRPL_WELCOME              = Numeric 001
 numRPL_YOURHOST             = Numeric 002
 numRPL_CREATED              = Numeric 003
 numRPL_WHOISUSER            = Numeric 311
+numRPL_WHOISSERVER          = Numeric 312
 numRPL_ENDOFWHO             = Numeric 315
 numRPL_ENDOFWHOIS           = Numeric 318
 numRPL_WHOISCHANNELS        = Numeric 319
