@@ -28,6 +28,7 @@ data Client = Client
     , host          :: Maybe String
     , channels      :: [String]
     , registered    :: Bool
+    , quitReason    :: Maybe String
     } deriving (Show)
 
 defaultClient :: Client
@@ -40,6 +41,7 @@ defaultClient = Client
     , host          = Nothing
     , channels      = []
     , registered    = False
+    , quitReason    = Nothing
     }
 
 whenClientRegistered :: Client -> a -> IO a -> IO a

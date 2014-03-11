@@ -18,10 +18,11 @@ module IRC.Server
 ) where
 
 import Data.Char (toUpper)
-import Data.List (sort)
+import Data.List (sort, delete, nub)
 import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
+import Control.Monad (forM_)
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
 import System.IO
@@ -31,8 +32,9 @@ import Network hiding (accept)
 import Network.Socket
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (defaultClient, isClientReady, sendClient)
-import qualified IRC.Server.Client as Client
+import IRC.Server.Client (defaultClient, isClientReady, clientToMask, sendClient, sendClientFrom)
+import qualified IRC.Server.Client as Cli
+import qualified IRC.Server.Channel as Chan
 import qualified IRC.Server.Environment as Env
 import qualified Plugin as P
 import Config
@@ -68,7 +70,7 @@ acceptLoop sock env = do
         hSetNewlineMode handle universalNewlineMode
         hSetBuffering handle LineBuffering
         hSetEncoding handle utf8
-        let client = defaultClient {Client.handle=Just handle}
+        let client = defaultClient {Cli.handle=Just handle}
         let newEnv = env {Env.client=client}
 
         forkIO (serveClient newEnv sockAddr)
@@ -89,7 +91,7 @@ serveClient env sockAddr = do
     tryIOError $ do
         shared <- readMVar sharedM
         host <- lookupHost sockAddr
-        let client = baseClient {Client.host=Just host}
+        let client = baseClient {Cli.host=Just host}
         maybeEnv <- timeout (toMicro connectTimeout) $ registerClient env {Env.client=client, Env.local=shared}
         case maybeEnv of
             Just newEnv -> do
@@ -114,17 +116,32 @@ serveClient env sockAddr = do
                 clients     = Env.clients shared
                 uids        = Env.uids shared
                 uid         = firstAvailable $ sort (IM.keys clients)
-                regClient   = (Env.client newEnv) {Client.uid=Just uid, Client.registered=True}
+                regClient   = (Env.client newEnv) {Cli.uid=Just uid, Cli.registered=True}
                 regEnv      = newEnv {Env.client=regClient}
                 newClients  = IM.insert uid regClient clients
                 newUids     = M.insert (map toUpper nick) uid uids
-                Just nick   = Client.nick regClient
+                Just nick   = Cli.nick regClient
                 cleanup s   = do
-                    let nc = IM.delete uid (Env.clients s)
+                    forM_ (map (finClients IM.!) uniqUids) $ \c ->
+                        sendClientFrom (show $ clientToMask finClient) c $ "QUIT :" ++ case maybeReason of
+                            Just reason -> reason
+                            Nothing     -> "Client Quit"
                     return $ case IM.lookup uid (Env.clients s) of
-                        Just (Client.Client {Client.nick=Just n}) -> s {Env.clients=nc, Env.uids=nu}
-                          where nu = M.delete (map toUpper n) (Env.uids s)
-                        _ -> s {Env.clients=nc}
+                        Just (Cli.Client {Cli.nick=Just n})
+                            -> s {Env.clients=finClients, Env.uids=finUids, Env.channels=finChans}
+                          where finUids = M.delete (map toUpper n) (Env.uids s)
+                        _   -> s {Env.clients=finClients, Env.channels=finChans}
+                  where
+                    finClients = IM.delete uid (Env.clients s)
+                    finClient = (Env.clients s) IM.! uid
+                    maybeReason = Cli.quitReason finClient
+                    locChans = Env.channels s
+                    cliChans = Cli.channels finClient
+                    finChans = M.mapWithKey f locChans
+                    f name channel = if elem name cliChans
+                        then channel {Chan.uids=delete uid (Chan.uids channel)}
+                        else channel
+                    uniqUids = nub $ concatMap Chan.uids $ map (finChans M.!) cliChans
             Nothing -> sendClient client $ "ERROR :Closing Link " ++ host ++ " (Connection timed out)"
     tryIOError $ hClose handle
     return ()
@@ -135,7 +152,7 @@ serveClient env sockAddr = do
     networkName = getConfigString cp "info" "network"
     connectTimeout = getConfigInt cp "client" "connect_timeout"
     baseClient = Env.client env
-    Just handle = Client.handle baseClient
+    Just handle = Cli.handle baseClient
 
 registerClient :: Env.Env -> IO Env.Env
 registerClient env = do
@@ -148,7 +165,7 @@ registerClient env = do
                 True    -> return newEnv
                 False   -> registerClient newEnv
         Nothing -> registerClient env
-  where Just handle = Client.handle (Env.client env)
+  where Just handle = Cli.handle (Env.client env)
 
 loopClient :: Env.Env -> Bool -> IO ()
 loopClient env pinged = do
@@ -175,11 +192,11 @@ handleLine env = do
                     newEnv <- h locEnv msg
                     let newLocal    = Env.local newEnv
                         newClient   = Env.client newEnv
-                        Just nick   = Client.nick newClient
+                        Just nick   = Cli.nick newClient
                         nickUpper   = map toUpper nick
                         newClients  = IM.insert uid newClient (Env.clients s)
                         newUids     = case IM.lookup uid (Env.clients s) of
-                            Just Client.Client {Client.nick=Just oldNick}
+                            Just Cli.Client {Cli.nick=Just oldNick}
                                 -> M.insert nickUpper uid $ M.delete (map toUpper oldNick) (Env.uids s)
                             _   -> M.insert nickUpper uid (Env.uids s)
                     return (newLocal {Env.clients=newClients, Env.uids=newUids}, newEnv)
@@ -190,8 +207,8 @@ handleLine env = do
   where
     Just sharedM    = Env.shared env
     client          = Env.client env
-    Just handle     = Client.handle client -- force thread crash if handle is Nothing
-    Just uid        = Client.uid client
+    Just handle     = Cli.handle client -- force thread crash if handle is Nothing
+    Just uid        = Cli.uid client
 
 toMicro :: Num a => a -> a
 toMicro = (*1000000)
