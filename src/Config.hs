@@ -33,8 +33,9 @@ data Config = Config
 defaultCP :: ConfigParser
 defaultCP = forceEither $ return emptyCP
     >>= add_section "info"
-    >>= set "info"      "name"      "lambdircd"
-    >>= set "info"      "network"   "LambdaNet"
+    >>= set "info"      "name"          "lambdircd"
+    >>= set "info"      "network"       "LambdaNet"
+    >>= set "info"      "description"   "A lambdircd server"
     >>= add_section "listen"
     >>= set "listen"    "port"  "6667"
     >>= add_section "client"

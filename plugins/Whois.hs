@@ -24,6 +24,7 @@ import IRC.Numeric
 import qualified IRC.Server.Client as Client
 import IRC.Server.Environment (whenRegistered)
 import qualified IRC.Server.Environment as Env
+import Config
 import Plugin
 
 plugin = defaultPlugin {handlers=[("WHOIS", whois)]}
@@ -49,10 +50,14 @@ whois env (Message _ _ (target:[])) = whenRegistered env $ do
                 channels = Client.channels targetClient
             sendNumeric env numRPL_WHOISUSER [nick, user, host, "*", real]
             unless (null channels) $ sendNumeric env numRPL_WHOISCHANNELS [nick, unwords channels]
+            sendNumeric env numRPL_WHOISSERVER [nick, serverName, serverDesc]
             sendNumeric env numRPL_ENDOFWHOIS [nick, "End of /WHOIS list"]
         else sendNumeric env numERR_NOSUCHNICK [target, "No such nick"]
     return env
   where
+    cp = Env.config env
+    serverName = getConfigString cp "info" "name"
+    serverDesc = getConfigString cp "info" "description"
     targetUpper = map toUpper target
     local = Env.local env
 whois env _ = whenRegistered env $ do
