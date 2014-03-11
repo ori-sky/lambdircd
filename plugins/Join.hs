@@ -20,7 +20,6 @@ import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (sendClient)
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Channel as Chan
 import IRC.Server.Channel.Helper
@@ -40,8 +39,7 @@ join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ do
                         then M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=uid:us}) chan locChans
                         else M.insert chan (Chan.Channel chan [uid]) locChans
                     nicks = map (fromMaybe "*" . Client.nick . (clients IM.!)) $ Chan.uids (newChans M.! chan)
-                sendClient client $ ":" ++ nick ++ " JOIN " ++ chan
-                sendChannelOthersFromClient client env (newChans M.! chan) $ "JOIN " ++ chan
+                sendChannelFromClient client env (newChans M.! chan) $ "JOIN " ++ chan
                 sendNumeric env numRPL_NAMREPLY ["=", chan, unwords nicks]
                 sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
                 return env
