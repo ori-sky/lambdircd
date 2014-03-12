@@ -20,7 +20,7 @@ import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (clientToMask, sendClient)
+import IRC.Server.Client.Helper
 import qualified IRC.Server.Client as Client
 import IRC.Server.Channel.Helper
 import IRC.Server.Environment (whenRegistered)

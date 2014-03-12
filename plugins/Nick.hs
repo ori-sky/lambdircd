@@ -20,7 +20,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (clientToMask, sendClientFrom)
+import IRC.Server.Client.Helper
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
 import Plugin

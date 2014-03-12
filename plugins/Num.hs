@@ -16,7 +16,7 @@
 module Num where
 
 import qualified Data.IntMap as IM
-import IRC.Server.Client (sendClient)
+import IRC.Server.Client.Helper
 import qualified IRC.Server.Environment as Env
 import Plugin
 

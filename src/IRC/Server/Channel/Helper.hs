@@ -17,7 +17,7 @@ module IRC.Server.Channel.Helper where
 
 import qualified Data.IntMap as IM
 import Control.Monad (unless)
-import IRC.Server.Client (clientToMask, sendClient)
+import IRC.Server.Client.Helper
 import qualified IRC.Server.Client as Client
 import IRC.Server.Channel
 import qualified IRC.Server.Environment as Env

@@ -18,7 +18,7 @@ module IRC.Numeric where
 import Data.Word (Word16)
 import Data.Maybe (fromMaybe)
 import IRC.Server.Environment (Env)
-import IRC.Server.Client (sendClient)
+import IRC.Server.Client.Helper
 import qualified IRC.Server.Environment as Env
 import qualified IRC.Server.Client as Client (nick)
 import Config

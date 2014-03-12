@@ -32,7 +32,8 @@ import Network hiding (accept)
 import Network.Socket
 import IRC.Message
 import IRC.Numeric
-import IRC.Server.Client (defaultClient, isClientReady, clientToMask, sendClient, sendClientFrom)
+import IRC.Server.Client (defaultClient)
+import IRC.Server.Client.Helper
 import qualified IRC.Server.Client as Cli
 import qualified IRC.Server.Channel as Chan
 import qualified IRC.Server.Environment as Env

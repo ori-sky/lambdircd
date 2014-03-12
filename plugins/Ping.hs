@@ -17,7 +17,7 @@ module Ping where
 
 import IRC.Message (Message(..))
 import IRC.Numeric
-import IRC.Server.Client as Client (sendClient)
+import IRC.Server.Client.Helper
 import qualified IRC.Server.Environment as Env
 import Config
 import Plugin

@@ -15,10 +15,7 @@
 
 module IRC.Server.Client where
 
-import Data.Maybe
-import System.IO
-import System.IO.Error
-import qualified IRC.Hostmask as H
+import System.IO (Handle)
 
 data Client = Client
     { uid           :: Maybe Int
@@ -44,31 +41,3 @@ defaultClient = Client
     , registered    = False
     , quitReason    = Nothing
     }
-
-whenClientRegistered :: Client -> a -> IO a -> IO a
-whenClientRegistered client x io
-    | registered client = io
-    | otherwise = return x
-
-isClientReady :: Client -> Bool
-isClientReady client =
-    isJust (nick client) &&
-    isJust (user client) &&
-    isJust (realName client)
-
-clientToMask :: Client -> H.Hostmask
-clientToMask client = H.Hostmask n u h
-  where
-    Just n = nick client
-    Just u = user client
-    Just h = host client
-
-sendClient :: Client -> String -> IO ()
-sendClient client message = do
-    tryIOError $ hPutStr handle' $ message ++ "\r\n"
-    return ()
-  where Just handle' = handle client
-
-sendClientFrom :: String -> Client -> String -> IO ()
-sendClientFrom mask client message = sendClient client newMessage
-  where newMessage = ':' : mask ++ ' ' : message

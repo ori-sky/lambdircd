@@ -19,7 +19,8 @@ import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import Control.Concurrent.MVar
 import IRC.Message (Message(..))
-import IRC.Server.Client hiding (channels)
+import IRC.Server.Client (Client, defaultClient)
+import IRC.Server.Client.Helper
 import qualified IRC.Server.Channel as Chan
 import Data.ConfigFile.Monadic
 
