@@ -15,10 +15,12 @@
 
 module IRC.Server.Channel.Helper where
 
+import Data.List (nub)
+import qualified Data.Map as M
 import qualified Data.IntMap as IM
-import Control.Monad (unless)
+import Control.Monad (unless, forM_)
 import IRC.Server.Client.Helper
-import qualified IRC.Server.Client as Client
+import qualified IRC.Server.Client as Cli
 import IRC.Server.Channel
 import qualified IRC.Server.Environment as Env
 
@@ -33,7 +35,7 @@ sendChannelFrom :: String -> Env.Env -> Channel -> String -> IO ()
 sendChannelFrom src env chan msg = sendChannel env chan newMsg
   where newMsg = ':' : src ++ ' ' : msg
 
-sendChannelFromClient :: Client.Client -> Env.Env -> Channel -> String -> IO ()
+sendChannelFromClient :: Cli.Client -> Env.Env -> Channel -> String -> IO ()
 sendChannelFromClient cli = sendChannelFrom $ show (clientToMask cli)
 
 sendChannelOthers :: Env.Env -> Channel -> String -> IO ()
@@ -41,7 +43,7 @@ sendChannelOthers env chan msg = mapM_ f (uids chan)
   where
     local = Env.local env
     client = Env.client env
-    Just uid = Client.uid client
+    Just uid = Cli.uid client
     f u = unless (u == uid) $ sendClient c msg
       where c = Env.clients local IM.! u
 
@@ -49,5 +51,19 @@ sendChannelOthersFrom :: String -> Env.Env -> Channel -> String -> IO ()
 sendChannelOthersFrom src env chan msg = sendChannelOthers env chan newMsg
   where newMsg = ':' : src ++ ' ' : msg
 
-sendChannelOthersFromClient :: Client.Client -> Env.Env -> Channel -> String -> IO ()
+sendChannelOthersFromClient :: Cli.Client -> Env.Env -> Channel -> String -> IO ()
 sendChannelOthersFromClient cli = sendChannelOthersFrom $ show (clientToMask cli)
+
+getUniqCommon :: Env.Env -> Cli.Client -> [Int]
+getUniqCommon env cli = nub $ concatMap uids $ map (locChans M.!) cliChans
+  where
+    local = Env.local env
+    locChans = Env.channels local
+    cliChans = Cli.channels cli
+
+sendUniqCommon :: Env.Env -> Cli.Client -> String -> IO ()
+sendUniqCommon env cli msg = forM_ (map (locClients IM.!) uniqUids) $ flip sendClient msg
+  where
+    local = Env.local env
+    locClients = Env.clients local
+    uniqUids = getUniqCommon env cli
