@@ -46,13 +46,11 @@ nick env _ = do
 
 tryChangeNick :: Env.Env -> String -> IO Env.Env
 tryChangeNick env newNick = do
-    if newNickUpper == map toUpper nick && newNick /= nick
+    if (newNickUpper == map toUpper nick && newNick /= nick) || M.notMember newNickUpper (Env.uids local)
         then return env {Env.client=client {Client.nick=Just newNick}}
-        else if M.notMember newNickUpper (Env.uids local)
-            then return env {Env.client=client {Client.nick=Just newNick}}
-            else do
-                sendNumeric env numERR_NICKNAMEINUSE [newNick, "Nickname is already in use"]
-                return env
+        else do
+            sendNumeric env numERR_NICKNAMEINUSE [newNick, "Nickname is already in use"]
+            return env
   where
     newNickUpper = map toUpper newNick
     local = Env.local env
