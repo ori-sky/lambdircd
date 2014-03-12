@@ -15,7 +15,7 @@
 
 module IRC.Server.Channel.Helper where
 
-import Data.List (nub)
+import Data.List (delete, nub)
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import Control.Monad (unless, forM_)
@@ -54,16 +54,19 @@ sendChannelOthersFrom src env chan msg = sendChannelOthers env chan newMsg
 sendChannelOthersFromClient :: Cli.Client -> Env.Env -> Channel -> String -> IO ()
 sendChannelOthersFromClient cli = sendChannelOthersFrom $ show (clientToMask cli)
 
-getUniqCommon :: Env.Env -> Cli.Client -> [Int]
-getUniqCommon env cli = nub $ concatMap uids $ map (locChans M.!) cliChans
+getUniqCommon :: Env.Shared -> Cli.Client -> [Int]
+getUniqCommon local cli = nub $ concatMap uids $ map (locChans M.!) cliChans
   where
-    local = Env.local env
     locChans = Env.channels local
     cliChans = Cli.channels cli
 
-sendUniqCommon :: Env.Env -> Cli.Client -> String -> IO ()
-sendUniqCommon env cli msg = forM_ (map (locClients IM.!) uniqUids) $ flip sendClient msg
-  where
-    local = Env.local env
-    locClients = Env.clients local
-    uniqUids = getUniqCommon env cli
+sendUids :: Env.Shared -> [Int] -> String -> IO ()
+sendUids local uids msg = forM_ (map (locClients IM.!) uids) $ flip sendClient msg
+  where locClients = Env.clients local
+
+sendUniqCommon :: Env.Shared -> Cli.Client -> String -> IO ()
+sendUniqCommon local cli msg = sendUids local (getUniqCommon local cli) msg
+
+sendUniqCommonOthers :: Env.Shared -> Cli.Client -> String -> IO ()
+sendUniqCommonOthers local cli msg = sendUids local (delete uid $ getUniqCommon local cli) msg
+  where Just uid = Cli.uid cli

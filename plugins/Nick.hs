@@ -32,7 +32,7 @@ nick :: CommandHandler
 nick env (Message _ _ (nick:_))
     | Client.registered client = if canChangeNick env nick
         then do
-            sendUniqCommon env client $ ':' : show (clientToMask client) ++ " NICK :" ++ nick
+            sendUniqCommon (Env.local env) client $ ':' : show (clientToMask client) ++ " NICK :" ++ nick
             return env {Env.client=client {Client.nick=Just nick}}
         else do
             sendNumeric env numERR_NICKNAMEINUSE [nick, "Nickname is already in use"]
@@ -42,8 +42,7 @@ nick env (Message _ _ (nick:_))
         else do
             sendNumeric env numERR_NICKNAMEINUSE [nick, "Nickname is already in use"]
             return env
-  where
-    client = Env.client env
+  where client = Env.client env
 nick env _ = do
     sendNumeric env numERR_NONICKNAMEGIVEN ["No nickname given"]
     return env

@@ -18,11 +18,10 @@ module IRC.Server
 ) where
 
 import Data.Char (toUpper)
-import Data.List (sort, delete, nub)
+import Data.List (sort, delete)
 import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
-import Control.Monad (forM_)
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
 import System.IO
@@ -34,6 +33,7 @@ import IRC.Message
 import IRC.Numeric
 import IRC.Server.Client (defaultClient)
 import IRC.Server.Client.Helper
+import IRC.Server.Channel.Helper
 import qualified IRC.Server.Client as Cli
 import qualified IRC.Server.Channel as Chan
 import qualified IRC.Server.Environment as Env
@@ -106,8 +106,8 @@ serveClient env sockAddr = do
                     newUids     = M.insert (map toUpper nick) uid uids
                     Just nick   = Cli.nick regClient
                     cleanup s   = do
-                        forM_ (map (finClients IM.!) uniqUids) $ \c ->
-                            sendClientFrom (show $ clientToMask finClient) c $ "QUIT :" ++ case maybeReason of
+                        sendUniqCommonOthers s finClient $ ':' : show (clientToMask finClient) ++ " QUIT :" ++
+                            case maybeReason of
                                 Just reason -> reason
                                 Nothing     -> "Client Quit"
                         return $ case IM.lookup uid (Env.clients s) of
@@ -119,13 +119,10 @@ serveClient env sockAddr = do
                         finClients = IM.delete uid (Env.clients s)
                         finClient = (Env.clients s) IM.! uid
                         maybeReason = Cli.quitReason finClient
-                        locChans = Env.channels s
-                        cliChans = Cli.channels finClient
-                        finChans = M.mapWithKey f locChans
-                        f name channel = if elem name cliChans
+                        finChans = M.mapWithKey f (Env.channels s)
+                        f name channel = if elem name (Cli.channels finClient)
                             then channel {Chan.uids=delete uid (Chan.uids channel)}
                             else channel
-                        uniqUids = nub $ concatMap Chan.uids $ map (finChans M.!) cliChans
                 if M.notMember (map toUpper nick) uids
                     then do
                         putMVar sharedM newShared {Env.clients=newClients, Env.uids=newUids}
