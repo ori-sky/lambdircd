@@ -21,6 +21,7 @@ import qualified Data.Map as M
 import IRC.Message
 import IRC.Numeric
 import IRC.Server.Client.Helper
+import IRC.Server.Channel.Helper
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
 import Plugin
@@ -31,7 +32,7 @@ nick :: CommandHandler
 nick env (Message _ _ (nick:_))
     | Client.registered client = if canChangeNick env nick
         then do
-            sendClientFrom (show $ clientToMask client) client $ ':':oldNick ++ " NICK :" ++ nick
+            sendUniqCommon env client $ ':' : show (clientToMask client) ++ " NICK :" ++ nick
             return env {Env.client=client {Client.nick=Just nick}}
         else do
             sendNumeric env numERR_NICKNAMEINUSE [nick, "Nickname is already in use"]
@@ -43,7 +44,6 @@ nick env (Message _ _ (nick:_))
             return env
   where
     client = Env.client env
-    Just oldNick = Client.nick client
 nick env _ = do
     sendNumeric env numERR_NONICKNAMEGIVEN ["No nickname given"]
     return env
