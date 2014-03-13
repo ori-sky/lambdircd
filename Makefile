@@ -1,10 +1,11 @@
 EXECUTABLE=lambdircd
 FLAGS=-W -O2 -threaded
+CFLAGS=
 
 all: build-plugins build
 
 build-plugins:
-	ghc $(FLAGS) -isrc plugins/*.hs
+	ghc $(FLAGS) $(CFLAGS) -isrc plugins/*.hs
 
 build:
 	ghc $(FLAGS) $(CFLAGS) -isrc src/Main -o $(EXECUTABLE)
