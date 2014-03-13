@@ -50,8 +50,7 @@ nick env (Message _ _ (nick:_))
     aChange = \e -> return env {Env.client=(Env.client e) {Client.nick=Just nick}}
     aInUse = \e -> sendNumeric e numERR_NICKNAMEINUSE [nick, "Nickname is already in use"] >> return e
 nick env _ = env {Env.actions=a:Env.actions env}
-  where
-    a = GenericAction $ \e -> sendNumeric e numERR_NONICKNAMEGIVEN ["No nickname given"] >> return e
+  where a = GenericAction $ \e -> sendNumeric e numERR_NONICKNAMEGIVEN ["No nickname given"] >> return e
 
 canChangeNick :: Env.Env -> String -> Bool
 canChangeNick env newNick = do
