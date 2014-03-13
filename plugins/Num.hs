@@ -27,4 +27,6 @@ num :: CommandHSpec
 num env _ = env {Env.actions = a : Env.actions env}
   where
     local = Env.local env
-    a = GenericAction $ sendClient (Env.client env) $ show (IM.size (Env.clients local))
+    a = GenericAction $ \e -> do
+        sendClient (Env.client e) $ (show.IM.size.Env.clients.Env.local) e
+        return e

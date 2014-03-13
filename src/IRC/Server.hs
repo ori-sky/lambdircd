@@ -22,6 +22,7 @@ import Data.List (sort, delete)
 import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
+import Control.Monad ((>=>))
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
 import System.IO
@@ -167,7 +168,8 @@ registerClient env = do
         Just commandH -> do
             let newEnv = commandH env {Env.actions=[]} msg
                 finEnv = foldr (.) id (M.elems $ Env.cModeHandlers env) newEnv
-            mapM_ actionIO (Env.actions finEnv)
+                fs = map actionIO (Env.actions finEnv)
+            foldr (>=>) return fs finEnv
             case isClientReady (Env.client finEnv) of
                 True    -> return finEnv
                 False   -> registerClient finEnv
@@ -198,7 +200,9 @@ handleLine env = do
           where process s = do
                     let newEnv = commandH locEnv {Env.actions=[]} msg
                         finEnv = foldr (.) id (M.elems $ Env.cModeHandlers env) newEnv
-                    mapM_ actionIO (Env.actions finEnv)
+                        fs = map actionIO (Env.actions finEnv)
+                    foldr (>=>) return fs finEnv
+                    --mapM_ actionIO (Env.actions finEnv)
                     let newLocal    = Env.local finEnv
                         newClient   = Env.client finEnv
                         Just nick   = Cli.nick newClient

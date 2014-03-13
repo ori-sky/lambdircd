@@ -45,7 +45,7 @@ data Env = Env
     , cModeHandlers     :: M.Map Char (Env -> Env)
     , shared            :: Maybe (MVar Shared)
     , local             :: Shared
-    , actions           :: [Action]
+    , actions           :: [Action Env]
     }
 
 defaultEnv :: Env

@@ -18,6 +18,7 @@ module Nick where
 import Data.Char (toUpper)
 import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
+import Control.Monad ((>=>))
 import IRC.Action
 import IRC.Message
 import IRC.Numeric
@@ -31,24 +32,26 @@ plugin = defaultPlugin {handlers = [CommandHandler "NICK" nick]}
 
 nick :: CommandHSpec
 nick env (Message _ _ (nick:_))
-    | Client.registered client = if canChangeNick env nick
-        then do
-            let a = NamedAction "Nick.change" $ sendUniqCommon local client $ ':':mask ++ " NICK :" ++ nick
-            env {Env.actions=a:Env.actions env, Env.client=client {Client.nick=Just nick}}
-        else do
-            let a = GenericAction $ sendNumeric env numERR_NICKNAMEINUSE [nick, "Nickname is already in use"]
-            env {Env.actions=a:Env.actions env}
-    | otherwise = if canChangeNick env nick
-        then env {Env.client=client {Client.nick=Just nick}}
-        else do
-            let a = GenericAction $ sendNumeric env numERR_NICKNAMEINUSE [nick, "Nickname is already in use"]
-            env {Env.actions=a:Env.actions env}
+    | Client.registered (Env.client env) = do
+        let a = if canChangeNick env nick
+                then NamedAction "NickChange" (aSend >=> aChange)
+                else GenericAction aInUse
+        env {Env.actions=a:Env.actions env}
+    | otherwise = do
+        let a = if canChangeNick env nick
+                then NamedAction "NickChange" aChange
+                else GenericAction aInUse
+        env {Env.actions=a:Env.actions env}
   where
-    local  = Env.local env
-    client = Env.client env
-    mask   = show (clientToMask client)
+    aSend = \e -> do
+        let cli = Env.client e
+        sendUniqCommon (Env.local e) cli $ ':' : show (clientToMask cli) ++ " NICK :" ++ nick
+        return e
+    aChange = \e -> return env {Env.client=(Env.client e) {Client.nick=Just nick}}
+    aInUse = \e -> sendNumeric e numERR_NICKNAMEINUSE [nick, "Nickname is already in use"] >> return e
 nick env _ = env {Env.actions=a:Env.actions env}
-  where a = GenericAction $ sendNumeric env numERR_NONICKNAMEGIVEN ["No nickname given"]
+  where
+    a = GenericAction $ \e -> sendNumeric e numERR_NONICKNAMEGIVEN ["No nickname given"] >> return e
 
 canChangeNick :: Env.Env -> String -> Bool
 canChangeNick env newNick = do

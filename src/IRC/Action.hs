@@ -15,10 +15,10 @@
 
 module IRC.Action where
 
-data Action =
-    GenericAction (IO ())
-  | NamedAction String (IO ())
+data Action a =
+    GenericAction (a -> IO a)
+  | NamedAction String (a -> IO a)
 
-actionIO :: Action -> IO ()
+actionIO :: Action a -> (a -> IO a)
 actionIO (GenericAction io) = io
 actionIO (NamedAction _ io) = io
