@@ -18,7 +18,8 @@ module IRC.Server.Environment where
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import Control.Concurrent.MVar
-import IRC.Message (Message(..))
+import IRC.Action
+import IRC.Message (Message)
 import IRC.Server.Client (Client, defaultClient)
 import IRC.Server.Client.Helper
 import qualified IRC.Server.Channel as Chan
@@ -38,20 +39,24 @@ defaultShared = Shared
     }
 
 data Env = Env
-    { config    :: ConfigParser
-    , client    :: Client
-    , handlers  :: M.Map String (Env -> Message -> IO Env)
-    , shared    :: Maybe (MVar Shared)
-    , local     :: Shared
+    { config            :: ConfigParser
+    , client            :: Client
+    , commandHandlers   :: M.Map String (Env -> Message -> Env)
+    , cModeHandlers     :: M.Map Char (Env -> Env)
+    , shared            :: Maybe (MVar Shared)
+    , local             :: Shared
+    , actions           :: [Action]
     }
 
 defaultEnv :: Env
 defaultEnv = Env
-    { config    = emptyCP
-    , client    = defaultClient
-    , handlers  = M.empty
-    , shared    = Nothing
-    , local     = defaultShared
+    { config            = emptyCP
+    , client            = defaultClient
+    , commandHandlers   = M.empty
+    , cModeHandlers     = M.empty
+    , shared            = Nothing
+    , local             = defaultShared
+    , actions           = []
     }
 
 whenRegistered :: Env -> IO Env -> IO Env

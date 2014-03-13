@@ -31,12 +31,14 @@ import Network hiding (accept)
 import Network.Socket
 import IRC.Message
 import IRC.Numeric
+import IRC.Action
 import IRC.Server.Client (defaultClient)
 import IRC.Server.Client.Helper
 import IRC.Server.Channel.Helper
 import qualified IRC.Server.Client as Cli
 import qualified IRC.Server.Channel as Chan
 import qualified IRC.Server.Environment as Env
+import Plugin hiding (name, handlers)
 import qualified Plugin as P
 import Config
 import Plugin.Load
@@ -45,8 +47,14 @@ serveIRC :: Env.Env -> IO ()
 serveIRC env = withSocketsDo $ do
     plugins <- mapM loadPlugin pluginNames
     sharedM <- newMVar Env.defaultShared
-    let handlers = M.unions $ map (M.fromList.P.handlers) (catMaybes plugins)
-    let newEnv = env {Env.handlers=handlers, Env.shared=Just sharedM}
+    let handlers = concat $ map P.handlers $ catMaybes plugins
+        commandHandlers = M.fromList [(k,v) | CommandHandler k v <- handlers]
+        cModeHandlers   = M.fromList [(k,v) | CModeHandler k v   <- handlers]
+        newEnv = env
+            { Env.shared = Just sharedM
+            , Env.commandHandlers = commandHandlers
+            , Env.cModeHandlers = cModeHandlers
+            }
 
     sock <- socket AF_INET Stream defaultProtocol
     setSocketOption sock ReuseAddr 1
@@ -155,12 +163,14 @@ registerClient :: Env.Env -> IO Env.Env
 registerClient env = do
     line <- hGetLine handle
     let msg = parseMessage line
-    case M.lookup (command msg) (Env.handlers env) of
-        Just handler -> do
-            newEnv <- handler env msg
-            case isClientReady (Env.client newEnv) of
-                True    -> return newEnv
-                False   -> registerClient newEnv
+    case M.lookup (command msg) (Env.commandHandlers env) of
+        Just commandH -> do
+            let newEnv = commandH env {Env.actions=[]} msg
+                finEnv = foldr (.) id (M.elems $ Env.cModeHandlers env) newEnv
+            mapM_ actionIO (Env.actions finEnv)
+            case isClientReady (Env.client finEnv) of
+                True    -> return finEnv
+                False   -> registerClient finEnv
         Nothing -> registerClient env
   where Just handle = Cli.handle (Env.client env)
 
@@ -183,10 +193,10 @@ handleLine env = do
     line <- hGetLine handle
     let msg = parseMessage line
         cmd = command msg
-    case M.lookup cmd (Env.handlers env) of
+    case M.lookup cmd (Env.commandHandlers env) of
         Just h  -> modifyMVar sharedM process
           where process s = do
-                    newEnv <- h locEnv msg
+                    let newEnv = h locEnv msg
                     let newLocal    = Env.local newEnv
                         newClient   = Env.client newEnv
                         Just nick   = Cli.nick newClient

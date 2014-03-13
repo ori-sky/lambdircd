@@ -13,18 +13,12 @@
  - limitations under the License.
  -}
 
-module Num where
+module IRC.Action where
 
-import qualified Data.IntMap as IM
-import IRC.Action
-import IRC.Server.Client.Helper
-import qualified IRC.Server.Environment as Env
-import Plugin
+data Action =
+    GenericAction (IO ())
+  | NamedAction String (IO ())
 
-plugin = defaultPlugin {handlers = [CommandHandler "NUM" num]}
-
-num :: CommandHSpec
-num env _ = env {Env.actions = a : Env.actions env}
-  where
-    local = Env.local env
-    a = GenericAction $ sendClient (Env.client env) $ show (IM.size (Env.clients local))
+actionIO :: Action -> IO ()
+actionIO (GenericAction io) = io
+actionIO (NamedAction _ io) = io

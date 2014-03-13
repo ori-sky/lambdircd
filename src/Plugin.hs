@@ -14,18 +14,30 @@
  -}
 
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 module Plugin where
 
-import IRC.Message (Message(..))
-import qualified IRC.Server.Environment as Env (Env(..))
+import IRC.Message (Message)
+import IRC.Server.Environment (Env)
 
-type CommandHandler = Env.Env -> Message -> IO Env.Env
+--type CommandHandler = Env.Env -> Message -> IO Env.Env
+
+type CommandHSpec   = Env -> Message -> Env
+type CModeHSpec     = Env -> Env
+
+instance Show CommandHSpec where show _ = "<function>"
+instance Show CModeHSpec where show _ = "<function>"
+
+data Handler =
+    CommandHandler String CommandHSpec
+  | CModeHandler Char CModeHSpec
+    deriving (Show)
 
 data Interface = Interface
     { isPlugin  :: Bool
     , name      :: String
-    , handlers  :: [(String, CommandHandler)]
+    , handlers  :: [Handler]
     }
 
 defaultPlugin = Interface
