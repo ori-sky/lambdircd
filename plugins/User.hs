@@ -17,28 +17,26 @@ module User where
 
 import IRC.Message
 import IRC.Numeric
+import IRC.Action
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Environment as Env
 import Plugin
 
-plugin = defaultPlugin
-    { handlers =
-        [ ("USER", user)
-        ]
-    }
+plugin = defaultPlugin {handlers = [CommandHandler "USER" user]}
 
-user :: CommandHandler
+user :: CommandHSpec
 user env (Message _ _ (user:_:_:realname:_))
     | Client.registered client = do
-        sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
-        return env
-    | otherwise = return env {Env.client=client {Client.user=Just user, Client.realName=Just realname}}
-  where client = Env.client env
+        let a = GenericAction $ sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
+        env {Env.actions=a:Env.actions env}
+    | otherwise = env {Env.client=client {Client.user=Just user, Client.realName=Just realname}}
+  where
+    client = Env.client env
 user env _
     | Client.registered client = do
-        sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
-        return env
+        let a = GenericAction $ sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
+        env {Env.actions=a:Env.actions env}
     | otherwise = do
-        sendNumeric env numERR_NEEDMOREPARAMS ["USER", "Not enough parameters"]
-        return env
+        let a = GenericAction $ sendNumeric env numERR_NEEDMOREPARAMS ["USER", "Not enough parameters"]
+        env {Env.actions=a:Env.actions env}
   where client = Env.client env

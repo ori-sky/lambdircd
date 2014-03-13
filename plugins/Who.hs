@@ -15,12 +15,15 @@
 
 module Who where
 
-import IRC.Message
-import IRC.Numeric
-import IRC.Server.Environment (whenRegistered)
+--import IRC.Message
+--import IRC.Numeric
+--import IRC.Server.Environment (whenRegistered)
 --import qualified IRC.Server.Environment as Env
 import Plugin
 
+plugin = defaultPlugin
+
+{-
 plugin = defaultPlugin {handlers=[("WHO", who)]}
 
 who :: CommandHandler
@@ -33,3 +36,4 @@ who env (Message _ _ (name:_)) = whenRegistered env $ do
 who env _ = whenRegistered env $ do
     sendNumeric env numERR_NEEDMOREPARAMS ["WHOIS", "Not enough parameters"]
     return env
+-}

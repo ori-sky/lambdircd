@@ -59,6 +59,6 @@ defaultEnv = Env
     , actions           = []
     }
 
-whenRegistered :: Env -> IO Env -> IO Env
+whenRegistered :: Env -> Env -> Env
 whenRegistered env = whenClientRegistered cli env
   where cli = client env

@@ -21,10 +21,10 @@ import System.IO.Error
 import qualified IRC.Hostmask as H
 import IRC.Server.Client
 
-whenClientRegistered :: Client -> a -> IO a -> IO a
-whenClientRegistered client x io
-    | registered client = io
-    | otherwise = return x
+whenClientRegistered :: Client -> a -> a -> a
+whenClientRegistered client x y
+    | registered client = y
+    | otherwise = x
 
 isClientReady :: Client -> Bool
 isClientReady client =

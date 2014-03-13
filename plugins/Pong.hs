@@ -17,11 +17,7 @@ module Pong where
 
 import Plugin
 
-plugin = defaultPlugin
-    { handlers =
-        [ ("PONG", pong)
-        ]
-    }
+plugin = defaultPlugin {handlers = [CommandHandler "PONG" pong]}
 
-pong :: CommandHandler
-pong env _ = return env
+pong :: CommandHSpec
+pong env _ = env

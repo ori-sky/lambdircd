@@ -17,21 +17,20 @@ module Ping where
 
 import IRC.Message (Message(..))
 import IRC.Numeric
+import IRC.Action
 import IRC.Server.Client.Helper
 import qualified IRC.Server.Environment as Env
 import Config
 import Plugin
 
-plugin = defaultPlugin {handlers=[("PING", ping)]}
+plugin = defaultPlugin {handlers = [CommandHandler "PING" ping]}
 
-ping :: CommandHandler
-ping env (Message _ _ (server1:_)) = do
-    sendClient client $ ":"++serverName++" PONG "++serverName++" :" ++ server1
-    return env
+ping :: CommandHSpec
+ping env (Message _ _ (server1:_)) = env {Env.actions=a:Env.actions env}
   where
     client = Env.client env
     cp = Env.config env
     serverName = getConfigString cp "info" "name"
-ping env _ = do
-    sendNumeric env numERR_NEEDMOREPARAMS ["PING", "Not enough parameters"]
-    return env
+    a = NamedAction "Ping.ping" $ sendClient client $ ":" ++ serverName ++ " PONG " ++ serverName++" :" ++ server1
+ping env _ = env {Env.actions=a:Env.actions env}
+  where a = GenericAction $ sendNumeric env numERR_NEEDMOREPARAMS ["PING", "Not enough parameters"]

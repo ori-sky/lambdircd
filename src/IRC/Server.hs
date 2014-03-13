@@ -194,11 +194,13 @@ handleLine env = do
     let msg = parseMessage line
         cmd = command msg
     case M.lookup cmd (Env.commandHandlers env) of
-        Just h  -> modifyMVar sharedM process
+        Just commandH  -> modifyMVar sharedM process
           where process s = do
-                    let newEnv = h locEnv msg
-                    let newLocal    = Env.local newEnv
-                        newClient   = Env.client newEnv
+                    let newEnv = commandH locEnv {Env.actions=[]} msg
+                        finEnv = foldr (.) id (M.elems $ Env.cModeHandlers env) newEnv
+                    mapM_ actionIO (Env.actions finEnv)
+                    let newLocal    = Env.local finEnv
+                        newClient   = Env.client finEnv
                         Just nick   = Cli.nick newClient
                         nickUpper   = map toUpper nick
                         newClients  = IM.insert uid newClient (Env.clients s)
@@ -206,7 +208,7 @@ handleLine env = do
                             Just Cli.Client {Cli.nick=Just oldNick}
                                 -> M.insert nickUpper uid $ M.delete (map toUpper oldNick) (Env.uids s)
                             _   -> M.insert nickUpper uid (Env.uids s)
-                    return (newLocal {Env.clients=newClients, Env.uids=newUids}, newEnv)
+                    return (newLocal {Env.clients=newClients, Env.uids=newUids}, finEnv)
                   where locEnv = env {Env.local=s}
         Nothing -> do
             sendNumeric env numERR_UNKNOWNCOMMAND [cmd, "Unknown command"]

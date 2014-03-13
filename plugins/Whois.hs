@@ -21,15 +21,16 @@ import qualified Data.IntMap as IM
 import Control.Monad (unless)
 import IRC.Message
 import IRC.Numeric
+import IRC.Action
 import qualified IRC.Server.Client as Client
 import IRC.Server.Environment (whenRegistered)
 import qualified IRC.Server.Environment as Env
 import Config
 import Plugin
 
-plugin = defaultPlugin {handlers=[("WHOIS", whois)]}
+plugin = defaultPlugin {handlers=[CommandHandler "WHOIS" whois]}
 
-whois :: CommandHandler
+whois :: CommandHSpec
 {-
 whois env (Message _ _ (server:_:_))
     | isClientRegistered client = do
@@ -48,18 +49,22 @@ whois env (Message _ _ (target:[])) = whenRegistered env $ do
                 Just host = Client.host targetClient
                 Just real = Client.realName targetClient
                 channels = Client.channels targetClient
-            sendNumeric env numRPL_WHOISUSER [nick, user, host, "*", real]
-            unless (null channels) $ sendNumeric env numRPL_WHOISCHANNELS [nick, unwords channels]
-            sendNumeric env numRPL_WHOISSERVER [nick, serverName, serverDesc]
-            sendNumeric env numRPL_ENDOFWHOIS [nick, "End of /WHOIS list"]
-        else sendNumeric env numERR_NOSUCHNICK [target, "No such nick"]
-    return env
+                as =
+                  [ NamedAction "Whois.user" $ sendNumeric env numRPL_WHOISUSER [nick, user, host, "*", real]
+                  , NamedAction "Whois.channels" $ unless (null channels) $
+                        sendNumeric env numRPL_WHOISCHANNELS [nick, unwords channels]
+                  , NamedAction "Whois.server" $ sendNumeric env numRPL_WHOISSERVER [nick, serverName, serverDesc]
+                  , NamedAction "Whois.end" $ sendNumeric env numRPL_ENDOFWHOIS [nick, "End of /WHOIS list"]
+                  ]
+            env {Env.actions=as++Env.actions env}
+        else do
+            let a = GenericAction $ sendNumeric env numERR_NOSUCHNICK [target, "No such nick"]
+            env {Env.actions=a:Env.actions env}
   where
     cp = Env.config env
     serverName = getConfigString cp "info" "name"
     serverDesc = getConfigString cp "info" "description"
     targetUpper = map toUpper target
     local = Env.local env
-whois env _ = whenRegistered env $ do
-    sendNumeric env numERR_NEEDMOREPARAMS ["WHOIS", "Not enough parameters"]
-    return env
+whois env _ = whenRegistered env $ env {Env.actions=a:Env.actions env}
+  where a = GenericAction $ sendNumeric env numERR_NEEDMOREPARAMS ["WHOIS", "Not enough parameters"]

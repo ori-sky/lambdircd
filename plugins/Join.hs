@@ -20,6 +20,7 @@ import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import IRC.Message
 import IRC.Numeric
+import IRC.Action
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Channel as Chan
 import IRC.Server.Channel.Helper
@@ -28,9 +29,9 @@ import qualified IRC.Server.Environment as Env
 import Config
 import Plugin
 
-plugin = defaultPlugin {handlers=[("JOIN", join)]}
+plugin = defaultPlugin {handlers=[CommandHandler "JOIN" join]}
 
-join :: CommandHandler
+join :: CommandHSpec
 join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ do
     if notElem chan channels
         then if length channels < maxChans
@@ -39,19 +40,22 @@ join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ do
                         then M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=uid:us}) chan locChans
                         else M.insert chan (Chan.Channel chan [uid]) locChans
                     nicks = map (fromMaybe "*" . Client.nick . (clients IM.!)) $ Chan.uids (newChans M.! chan)
-                sendChannelFromClient client env (newChans M.! chan) $ "JOIN " ++ chan
-                sendNumeric env numRPL_NAMREPLY ["=", chan, unwords nicks]
-                sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
-                return env
-                    { Env.client=client {Client.channels=chan:channels}
-                    , Env.local=local {Env.channels=newChans}
+                    a = NamedAction "Join.chan" $ do
+                        sendChannelFromClient client env (newChans M.! chan) $ "JOIN " ++ chan
+                        sendNumeric env numRPL_NAMREPLY ["=", chan, unwords nicks]
+                        sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
+                env
+                    { Env.client  = client {Client.channels=chan:channels}
+                    , Env.local   = local {Env.channels=newChans}
+                    , Env.actions = a : Env.actions env
                     }
             else do
-                sendNumeric env numERR_TOOMANYCHANNELS [chan, "You have joined too many channels"]
-                return env
+                let a = GenericAction $ sendNumeric env numERR_TOOMANYCHANNELS
+                        [chan, "You have joined too many channels"]
+                env {Env.actions=a:Env.actions env}
         else do
-            sendNumeric env numERR_USERONCHANNEL [nick, chan, "is already on channel"]
-            return env
+            let a = GenericAction $ sendNumeric env numERR_USERONCHANNEL [nick, chan, "is already on channel"]
+            env {Env.actions=a:Env.actions env}
   where
     maxChans = getConfigInt (Env.config env) "client" "max_channels"
     local = Env.local env
@@ -61,9 +65,7 @@ join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ do
     Just nick = Client.nick client
     Just uid = Client.uid client
     channels = Client.channels client
-join env (Message _ _ (chan:_)) = whenRegistered env $ do
-    sendNumeric env numERR_BADCHANNAME [chan, "Illegal channel name"]
-    return env
-join env _ = whenRegistered env $ do
-    sendNumeric env numERR_NEEDMOREPARAMS ["JOIN", "Not enough parameters"]
-    return env
+join env (Message _ _ (chan:_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
+  where a = GenericAction $ sendNumeric env numERR_BADCHANNAME [chan, "Illegal channel name"]
+join env _ = whenRegistered env $ env {Env.actions=a:Env.actions env}
+  where a = GenericAction $ sendNumeric env numERR_NEEDMOREPARAMS ["JOIN", "Not enough parameters"]

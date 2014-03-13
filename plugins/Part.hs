@@ -19,6 +19,7 @@ import Data.List
 import qualified Data.Map as M
 import IRC.Message
 import IRC.Numeric
+import IRC.Action
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Channel as Chan
 import IRC.Server.Channel.Helper
@@ -26,31 +27,35 @@ import IRC.Server.Environment (whenRegistered)
 import qualified IRC.Server.Environment as Env
 import Plugin
 
-plugin = defaultPlugin {handlers=[("PART", part)]}
+plugin = defaultPlugin {handlers = [CommandHandler "PART" part]}
 
-part :: CommandHandler
+part :: CommandHSpec
 part env (Message _ _ (chan@('#':_):xs)) = whenRegistered env $ if M.member chan locChans
     then if elem chan channels
         then do
             let newChans = M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=delete uid us}) chan locChans
-            sendChannelFromClient client env (locChans M.! chan) $ "PART " ++ chan ++ case xs of
-                reason:_    -> ' ' : ':' : reason
-                []          -> ""
-            return env
-                { Env.client=client {Client.channels=delete chan channels}
-                , Env.local=local {Env.channels=newChans}
+                a = NamedAction "part" $ sendChannelFromClient client env (locChans M.! chan) $ "PART " ++ chan ++
+                    case xs of
+                        reason:_    -> ' ' : ':' : reason
+                        []          -> ""
+            env
+                { Env.client  = client {Client.channels=delete chan channels}
+                , Env.local   = local {Env.channels=newChans}
+                , Env.actions = a : Env.actions env
                 }
-        else sendNumeric env numERR_NOTONCHANNEL [chan, "You're not on that channel"] >> return env
-    else sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"] >> return env
+        else do
+            let a = GenericAction $ sendNumeric env numERR_NOTONCHANNEL [chan, "You're not on that channel"]
+            env {Env.actions=a:Env.actions env}
+    else do
+        let a = GenericAction $ sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"]
+        env {Env.actions=a:Env.actions env}
   where
     local = Env.local env
     locChans = Env.channels local
     client = Env.client env
     Just uid = Client.uid client
     channels = Client.channels client
-part env (Message _ _ (chan:_)) = whenRegistered env $ do
-    sendNumeric env numERR_BADCHANNAME [chan, "Illegal channel name"]
-    return env
-part env _ = whenRegistered env $ do
-    sendNumeric env numERR_NEEDMOREPARAMS ["PART", "Not enough parameters"]
-    return env
+part env (Message _ _ (chan:_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
+  where a = GenericAction $ sendNumeric env numERR_BADCHANNAME [chan, "Illegal channel name"]
+part env _ = whenRegistered env $ env {Env.actions=a:Env.actions env}
+  where a = GenericAction $ sendNumeric env numERR_NEEDMOREPARAMS ["PART", "Not enough parameters"]
