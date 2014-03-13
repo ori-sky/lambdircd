@@ -30,32 +30,34 @@ import Plugin
 plugin = defaultPlugin {handlers = [CommandHandler "PART" part]}
 
 part :: CommandHSpec
-part env (Message _ _ (chan@('#':_):xs)) = whenRegistered env $ if M.member chan locChans
-    then if elem chan channels
-        then do
-            let newChans = M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=delete uid us}) chan locChans
-                a = NamedAction "part" $ sendChannelFromClient client env (locChans M.! chan) $ "PART " ++ chan ++
-                    case xs of
-                        reason:_    -> ' ' : ':' : reason
-                        []          -> ""
-            env
-                { Env.client  = client {Client.channels=delete chan channels}
-                , Env.local   = local {Env.channels=newChans}
-                , Env.actions = a : Env.actions env
-                }
-        else do
-            let a = GenericAction $ sendNumeric env numERR_NOTONCHANNEL [chan, "You're not on that channel"]
-            env {Env.actions=a:Env.actions env}
-    else do
-        let a = GenericAction $ sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"]
-        env {Env.actions=a:Env.actions env}
+part env (Message _ _ (chan@('#':_):xs)) = whenRegistered env $ do
+    let a = if M.member chan locChans
+            then if elem chan channels
+                then NamedAction "Part" aPart
+                else GenericAction aNotOn
+            else GenericAction aNoSuch
+    env {Env.actions=a:Env.actions env}
   where
-    local = Env.local env
-    locChans = Env.channels local
-    client = Env.client env
-    Just uid = Client.uid client
-    channels = Client.channels client
+    locChans = Env.channels (Env.local env)
+    channels = Client.channels (Env.client env)
+    aPart = \e -> do
+        let l   = Env.local e
+            lcs = Env.channels l
+            cli = Env.client e
+            cs  = Client.channels (Env.client e)
+            Just uid = Client.uid cli
+            newChans = M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=delete uid us}) chan lcs
+        sendChannelFromClient cli e (lcs M.! chan) $ "PART " ++ chan ++
+            case xs of
+                reason:_    -> ' ' : ':' : reason
+                []          -> ""
+        return env { Env.client = cli {Client.channels=delete chan cs}
+                   , Env.local  = l {Env.channels=newChans}
+                   }
+    aNotOn = \e -> sendNumeric e numERR_NOTONCHANNEL [chan, "You're not on that channel"] >> return e
+    aNoSuch = \e -> sendNumeric e numERR_NOSUCHCHANNEL [chan, "No such channel"] >> return e
+
 part env (Message _ _ (chan:_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
-  where a = GenericAction $ sendNumeric env numERR_BADCHANNAME [chan, "Illegal channel name"]
+  where a = GenericAction $ \e -> sendNumeric e numERR_BADCHANNAME [chan, "Illegal channel name"] >> return e
 part env _ = whenRegistered env $ env {Env.actions=a:Env.actions env}
-  where a = GenericAction $ sendNumeric env numERR_NEEDMOREPARAMS ["PART", "Not enough parameters"]
+  where a = GenericAction $ \e -> sendNumeric e numERR_NEEDMOREPARAMS ["PART", "Not enough parameters"] >> return e
