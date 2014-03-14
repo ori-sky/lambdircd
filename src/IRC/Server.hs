@@ -22,7 +22,7 @@ import Data.List (sort, delete)
 import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
-import Control.Monad (forM, forM_, (>=>))
+import Control.Monad (forM, (>=>))
 import Control.Concurrent (forkIO, forkFinally)
 import Control.Concurrent.MVar
 import System.IO
@@ -61,10 +61,10 @@ serveIRC env = withSocketsDo $ do
         f [addr, port] = do
             m <- newEmptyMVar
             forkFinally (listenIRC newEnv addr (fromIntegral $ read port)) $ \_ -> putMVar m ()
-            takeMVar m
-          where
-        f _ = print "invalid value for config option `[listen] addresses`"
-    forM_ addresses f
+            return (Just m)
+        f _ = print "invalid value for config option `[listen] addresses`" >> return Nothing
+    ms <- mapM f addresses
+    mapM_ takeMVar (catMaybes ms)
   where
     cp = Env.config env
     pluginNames = words $ getConfigString cp "plugins" "load"
