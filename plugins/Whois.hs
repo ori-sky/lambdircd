@@ -50,15 +50,17 @@ whois env (Message _ _ (target:[])) = whenRegistered env $ do
                 Just real = Client.realName targetClient
                 channels = Client.channels targetClient
                 as =
-                  [ NamedAction "Whois.user" $ sendNumeric env numRPL_WHOISUSER [nick, user, host, "*", real]
-                  , NamedAction "Whois.channels" $ unless (null channels) $
-                        sendNumeric env numRPL_WHOISCHANNELS [nick, unwords channels]
-                  , NamedAction "Whois.server" $ sendNumeric env numRPL_WHOISSERVER [nick, serverName, serverDesc]
-                  , NamedAction "Whois.end" $ sendNumeric env numRPL_ENDOFWHOIS [nick, "End of /WHOIS list"]
+                  [ NamedAction "WhoisUser"    $ \e -> sendNumeric e numRPL_WHOISUSER [nick, user, host, "*", real]
+                        >> return e
+                  , NamedAction "WhoisChans"   $ \e -> unless (null channels)
+                        (sendNumeric e numRPL_WHOISCHANNELS [nick, unwords channels]) >> return e
+                  , NamedAction "WhoisServer"  $ \e -> sendNumeric e numRPL_WHOISSERVER [nick, serverName, serverDesc]
+                        >> return e
+                  , GenericAction $ \e -> sendNumeric e numRPL_ENDOFWHOIS [nick, "End of /WHOIS list"] >> return e
                   ]
             env {Env.actions=as++Env.actions env}
         else do
-            let a = GenericAction $ sendNumeric env numERR_NOSUCHNICK [target, "No such nick"]
+            let a = GenericAction $ \e -> sendNumeric e numERR_NOSUCHNICK [target, "No such nick"] >> return e
             env {Env.actions=a:Env.actions env}
   where
     cp = Env.config env
@@ -67,4 +69,5 @@ whois env (Message _ _ (target:[])) = whenRegistered env $ do
     targetUpper = map toUpper target
     local = Env.local env
 whois env _ = whenRegistered env $ env {Env.actions=a:Env.actions env}
-  where a = GenericAction $ sendNumeric env numERR_NEEDMOREPARAMS ["WHOIS", "Not enough parameters"]
+  where a = GenericAction $ \e -> sendNumeric e numERR_NEEDMOREPARAMS ["WHOIS", "Not enough parameters"]
+            >> return e
