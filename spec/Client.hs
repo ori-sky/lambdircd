@@ -1,5 +1,6 @@
 import Test.Hspec
 import IRC.Server.Client
+import IRC.Server.Client.Helper
 
 main :: IO ()
 main = hspec $ do
