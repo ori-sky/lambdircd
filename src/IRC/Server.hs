@@ -57,6 +57,11 @@ serveIRC env = withSocketsDo $ do
             , Env.commandHandlers = commandHandlers
             , Env.transformHandlers = transformHandlers
             }
+    listenIRC newEnv
+  where pluginNames = words $ getConfigString (Env.config env) "plugins" "load"
+
+listenIRC :: Env.Env -> IO ()
+listenIRC env = do
     sock <- socket AF_INET Stream defaultProtocol
     setSocketOption sock ReuseAddr 1
     {- 6 = TCP option, 9 = defer accept
@@ -67,10 +72,9 @@ serveIRC env = withSocketsDo $ do
     bind sock $ SockAddrInet (fromIntegral port) iNADDR_ANY
     listen sock queue
     putStrLn $ "Listening on port " ++ show port
-    acceptLoop sock newEnv
+    acceptLoop sock env
   where
     cp = Env.config env
-    pluginNames = words $ getConfigString cp "plugins" "load"
     port = getConfigInt cp "listen" "port"
     queue = getConfigInt cp "listen" "queue"
     deferTimeout = getConfigInt cp "listen" "defer"
