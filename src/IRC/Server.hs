@@ -23,7 +23,8 @@ import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import Control.Monad (forM, (>=>))
-import Control.Concurrent (forkIO, forkFinally)
+import Control.Exception (finally)
+import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
 import System.IO
 import System.IO.Error
@@ -60,7 +61,7 @@ serveIRC env = withSocketsDo $ do
     let f ["*", port] = f ["0.0.0.0", port]
         f [addr, port] = do
             m <- newEmptyMVar
-            forkFinally (listenIRC newEnv addr (fromIntegral $ read port)) $ \_ -> putMVar m ()
+            forkIO $ listenIRC newEnv addr (fromIntegral $ read port) `finally` putMVar m ()
             return (Just m)
         f _ = print "invalid value for config option `[listen] addresses`" >> return Nothing
     ms <- mapM f addresses
