@@ -64,7 +64,7 @@ serveIRC env = withSocketsDo $ do
      -}
     tryIOError $ setSocketOption sock (CustomSockOpt (6, 9)) 30
         >> putStrLn "Using deferred accept for connections"
-    bindSocket sock $ SockAddrInet (fromIntegral port) iNADDR_ANY
+    bind sock $ SockAddrInet (fromIntegral port) iNADDR_ANY
     listen sock 5
     putStrLn $ "Listening on port " ++ show port
     acceptLoop sock newEnv
