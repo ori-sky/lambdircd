@@ -47,7 +47,7 @@ nick env (Message _ _ (nick:_))
         sendUniqCommon (Env.local e) cli $ ':' : show (clientToMask cli) ++ " NICK :" ++ nick
         return e
       where cli = Env.client e
-    aChange e = return env {Env.client=(Env.client e) {Client.nick=Just nick}}
+    aChange e = return e {Env.client=(Env.client e) {Client.nick=Just nick}}
     aInUse e = sendNumeric e numERR_NICKNAMEINUSE [nick, "Nickname is already in use"] >> return e
 nick env _ = env {Env.actions=a:Env.actions env}
   where a = GenericAction $ \e -> sendNumeric e numERR_NONICKNAMEGIVEN ["No nickname given"] >> return e

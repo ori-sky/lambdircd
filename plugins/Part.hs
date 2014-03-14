@@ -44,9 +44,10 @@ part env (Message _ _ (chan@('#':_):xs)) = whenRegistered env $ do
         sendChannelFromClient cli e (lcs M.! chan) $ "PART " ++ chan ++ case xs of
             reason:_ -> " :" ++ reason
             [] -> ""
-        return env { Env.client = cli {Client.channels=delete chan cs}
-                   , Env.local  = l {Env.channels=newChans}
-                   }
+        return e
+            { Env.client = cli {Client.channels=delete chan cs}
+            , Env.local  = l {Env.channels=newChans}
+            }
       where l   = Env.local e
             lcs = Env.channels l
             cli = Env.client e
