@@ -169,10 +169,10 @@ registerClient env = do
             let newEnv = commandH env {Env.actions=[]} msg
                 finEnv = foldr (.) id (M.elems $ Env.cModeHandlers env) newEnv
                 fs = map actionIO (Env.actions finEnv)
-            foldr (>=>) return fs finEnv
-            case isClientReady (Env.client finEnv) of
-                True    -> return finEnv
-                False   -> registerClient finEnv
+            retEnv <- foldr (>=>) return fs finEnv
+            case isClientReady (Env.client retEnv) of
+                True    -> return retEnv
+                False   -> registerClient retEnv
         Nothing -> registerClient env
   where Just handle = Cli.handle (Env.client env)
 
@@ -201,10 +201,9 @@ handleLine env = do
                     let newEnv = commandH locEnv {Env.actions=[]} msg
                         finEnv = foldr (.) id (M.elems $ Env.cModeHandlers env) newEnv
                         fs = map actionIO (Env.actions finEnv)
-                    foldr (>=>) return fs finEnv
-                    --mapM_ actionIO (Env.actions finEnv)
-                    let newLocal    = Env.local finEnv
-                        newClient   = Env.client finEnv
+                    retEnv <- foldr (>=>) return fs finEnv
+                    let newLocal    = Env.local retEnv
+                        newClient   = Env.client retEnv
                         Just nick   = Cli.nick newClient
                         nickUpper   = map toUpper nick
                         newClients  = IM.insert uid newClient (Env.clients s)
@@ -212,7 +211,7 @@ handleLine env = do
                             Just Cli.Client {Cli.nick=Just oldNick}
                                 -> M.insert nickUpper uid $ M.delete (map toUpper oldNick) (Env.uids s)
                             _   -> M.insert nickUpper uid (Env.uids s)
-                    return (newLocal {Env.clients=newClients, Env.uids=newUids}, finEnv)
+                    return (newLocal {Env.clients=newClients, Env.uids=newUids}, retEnv)
                   where locEnv = env {Env.local=s}
         Nothing -> do
             sendNumeric env numERR_UNKNOWNCOMMAND [cmd, "Unknown command"]

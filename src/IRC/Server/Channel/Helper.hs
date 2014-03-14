@@ -55,10 +55,11 @@ sendChannelOthersFromClient :: Cli.Client -> Env.Env -> Channel -> String -> IO 
 sendChannelOthersFromClient cli = sendChannelOthersFrom $ show (clientToMask cli)
 
 getUniqCommon :: Env.Shared -> Cli.Client -> [Int]
-getUniqCommon local cli = nub $ concatMap uids $ map (locChans M.!) cliChans
+getUniqCommon local cli = nub $ uid : (concatMap uids $ map (locChans M.!) cliChans)
   where
     locChans = Env.channels local
     cliChans = Cli.channels cli
+    Just uid = Cli.uid cli
 
 sendUids :: Env.Shared -> [Int] -> String -> IO ()
 sendUids local uids msg = forM_ (map (locClients IM.!) uids) $ flip sendClient msg
