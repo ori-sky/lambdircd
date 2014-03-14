@@ -43,12 +43,12 @@ nick env (Message _ _ (nick:_))
                 else GenericAction aInUse
         env {Env.actions=a:Env.actions env}
   where
-    aSend = \e -> do
-        let cli = Env.client e
+    aSend e = do
         sendUniqCommon (Env.local e) cli $ ':' : show (clientToMask cli) ++ " NICK :" ++ nick
         return e
-    aChange = \e -> return env {Env.client=(Env.client e) {Client.nick=Just nick}}
-    aInUse = \e -> sendNumeric e numERR_NICKNAMEINUSE [nick, "Nickname is already in use"] >> return e
+      where cli = Env.client e
+    aChange e = return env {Env.client=(Env.client e) {Client.nick=Just nick}}
+    aInUse e = sendNumeric e numERR_NICKNAMEINUSE [nick, "Nickname is already in use"] >> return e
 nick env _ = env {Env.actions=a:Env.actions env}
   where a = GenericAction $ \e -> sendNumeric e numERR_NONICKNAMEGIVEN ["No nickname given"] >> return e
 

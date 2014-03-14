@@ -40,22 +40,21 @@ part env (Message _ _ (chan@('#':_):xs)) = whenRegistered env $ do
   where
     locChans = Env.channels (Env.local env)
     channels = Client.channels (Env.client env)
-    aPart = \e -> do
-        let l   = Env.local e
+    aPart e = do
+        sendChannelFromClient cli e (lcs M.! chan) $ "PART " ++ chan ++ case xs of
+            reason:_ -> " :" ++ reason
+            [] -> ""
+        return env { Env.client = cli {Client.channels=delete chan cs}
+                   , Env.local  = l {Env.channels=newChans}
+                   }
+      where l   = Env.local e
             lcs = Env.channels l
             cli = Env.client e
             cs  = Client.channels (Env.client e)
             Just uid = Client.uid cli
             newChans = M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=delete uid us}) chan lcs
-        sendChannelFromClient cli e (lcs M.! chan) $ "PART " ++ chan ++
-            case xs of
-                reason:_    -> ' ' : ':' : reason
-                []          -> ""
-        return env { Env.client = cli {Client.channels=delete chan cs}
-                   , Env.local  = l {Env.channels=newChans}
-                   }
-    aNotOn = \e -> sendNumeric e numERR_NOTONCHANNEL [chan, "You're not on that channel"] >> return e
-    aNoSuch = \e -> sendNumeric e numERR_NOSUCHCHANNEL [chan, "No such channel"] >> return e
+    aNotOn e = sendNumeric e numERR_NOTONCHANNEL [chan, "You're not on that channel"] >> return e
+    aNoSuch e = sendNumeric e numERR_NOSUCHCHANNEL [chan, "No such channel"] >> return e
 
 part env (Message _ _ (chan:_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
   where a = GenericAction $ \e -> sendNumeric e numERR_BADCHANNAME [chan, "Illegal channel name"] >> return e
