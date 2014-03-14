@@ -50,11 +50,11 @@ serveIRC env = withSocketsDo $ do
     sharedM <- newMVar Env.defaultShared
     let handlers = concat $ map P.handlers $ catMaybes plugins
         commandHandlers = M.fromList [(k,v) | CommandHandler k v <- handlers]
-        cModeHandlers   = M.fromList [(k,v) | CModeHandler k v   <- handlers]
+        transformHandlers = [v | TransformHandler v <- handlers]
         newEnv = env
             { Env.shared = Just sharedM
             , Env.commandHandlers = commandHandlers
-            , Env.cModeHandlers = cModeHandlers
+            , Env.transformHandlers = transformHandlers
             }
 
     sock <- socket AF_INET Stream defaultProtocol
@@ -167,7 +167,7 @@ registerClient env = do
     case M.lookup (command msg) (Env.commandHandlers env) of
         Just commandH -> do
             let newEnv = commandH env {Env.actions=[]} msg
-                finEnv = foldr (.) id (M.elems $ Env.cModeHandlers env) newEnv
+                finEnv = foldr (.) id (Env.transformHandlers env) newEnv
                 fs = map actionIO (Env.actions finEnv)
             retEnv <- foldr (>=>) return fs finEnv
             case isClientReady (Env.client retEnv) of
@@ -199,7 +199,7 @@ handleLine env = do
         Just commandH  -> modifyMVar sharedM process
           where process s = do
                     let newEnv = commandH locEnv {Env.actions=[]} msg
-                        finEnv = foldr (.) id (M.elems $ Env.cModeHandlers env) newEnv
+                        finEnv = foldr (.) id (Env.transformHandlers env) newEnv
                         fs = map actionIO (Env.actions finEnv)
                     retEnv <- foldr (>=>) return fs finEnv
                     let newLocal    = Env.local retEnv

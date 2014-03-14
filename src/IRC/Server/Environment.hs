@@ -42,7 +42,7 @@ data Env = Env
     { config            :: ConfigParser
     , client            :: Client
     , commandHandlers   :: M.Map String (Env -> Message -> Env)
-    , cModeHandlers     :: M.Map Char (Env -> Env)
+    , transformHandlers :: [Env -> Env]
     , shared            :: Maybe (MVar Shared)
     , local             :: Shared
     , actions           :: [Action Env]
@@ -53,7 +53,7 @@ defaultEnv = Env
     { config            = emptyCP
     , client            = defaultClient
     , commandHandlers   = M.empty
-    , cModeHandlers     = M.empty
+    , transformHandlers = []
     , shared            = Nothing
     , local             = defaultShared
     , actions           = []
