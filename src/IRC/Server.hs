@@ -57,16 +57,16 @@ serveIRC env = withSocketsDo $ do
             , Env.commandHandlers = commandHandlers
             , Env.transformHandlers = transformHandlers
             }
-
     sock <- socket AF_INET Stream defaultProtocol
     setSocketOption sock ReuseAddr 1
     {- 6 = TCP option, 9 = defer accept
      - only supported on GNU systems
      -}
     tryIOError $ setSocketOption sock (CustomSockOpt (6, 9)) 30
+        >> putStrLn "Using deferred accept for connections"
     bindSocket sock $ SockAddrInet (fromIntegral port) iNADDR_ANY
     listen sock 5
-
+    putStrLn $ "Listening on port " ++ show port
     acceptLoop sock newEnv
   where
     cp = Env.config env
