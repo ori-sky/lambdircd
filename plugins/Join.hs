@@ -32,40 +32,36 @@ import Plugin
 plugin = defaultPlugin {handlers=[CommandHandler "JOIN" join]}
 
 join :: CommandHSpec
-join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ do
-    if notElem chan channels
-        then if length channels < maxChans
-            then do
-                let newChans = if M.member chan locChans
-                        then M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=uid:us}) chan locChans
-                        else M.insert chan (Chan.Channel chan [uid]) locChans
-                    nicks = map (fromMaybe "*" . Client.nick . (clients IM.!)) $ Chan.uids (newChans M.! chan)
-                    a = NamedAction "Join.chan" $ do
-                        sendChannelFromClient client env (newChans M.! chan) $ "JOIN " ++ chan
-                        sendNumeric env numRPL_NAMREPLY ["=", chan, unwords nicks]
-                        sendNumeric env numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
-                env
-                    { Env.client  = client {Client.channels=chan:channels}
-                    , Env.local   = local {Env.channels=newChans}
-                    , Env.actions = a : Env.actions env
-                    }
-            else do
-                let a = GenericAction $ sendNumeric env numERR_TOOMANYCHANNELS
-                        [chan, "You have joined too many channels"]
-                env {Env.actions=a:Env.actions env}
-        else do
-            let a = GenericAction $ sendNumeric env numERR_USERONCHANNEL [nick, chan, "is already on channel"]
-            env {Env.actions=a:Env.actions env}
+join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
   where
     maxChans = getConfigInt (Env.config env) "client" "max_channels"
-    local = Env.local env
-    clients = Env.clients local
-    locChans = Env.channels local
-    client = Env.client env
-    Just nick = Client.nick client
-    Just uid = Client.uid client
-    channels = Client.channels client
+    channels = Client.channels (Env.client env)
+    aJoin e = do
+        sendChannelFromClient (Env.client e) e (newChans M.! chan) $ "JOIN " ++ chan
+        sendNumeric e numRPL_NAMREPLY ["=", chan, unwords nicks]
+        sendNumeric e numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
+        return e
+            { Env.client = cli {Client.channels=chan:(Client.channels cli)}
+            , Env.local  = l {Env.channels=newChans}
+            }
+      where
+        l = Env.local e
+        lcs = Env.channels l
+        cli = Env.client e
+        Just uid = Client.uid cli
+        newChans = if M.member chan lcs
+            then M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=uid:us}) chan lcs
+            else M.insert chan (Chan.Channel chan [uid]) lcs
+        nicks = map (fromMaybe "*" . Client.nick . (Env.clients l IM.!)) $ Chan.uids (newChans M.! chan)
+    aTooMany e = sendNumeric e numERR_TOOMANYCHANNELS [chan, "You have joined too many channels"] >> return e
+    aAlready e = sendNumeric e numERR_USERONCHANNEL [nick, chan, "is already on channel"] >> return e
+      where Just nick = Client.nick (Env.client e)
+    a = if notElem chan channels
+        then if length channels < maxChans
+            then NamedAction "Join" aJoin
+            else GenericAction aTooMany
+        else GenericAction aAlready
 join env (Message _ _ (chan:_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
-  where a = GenericAction $ sendNumeric env numERR_BADCHANNAME [chan, "Illegal channel name"]
+  where a = GenericAction $ \e -> sendNumeric e numERR_BADCHANNAME [chan, "Illegal channel name"] >> return e
 join env _ = whenRegistered env $ env {Env.actions=a:Env.actions env}
-  where a = GenericAction $ sendNumeric env numERR_NEEDMOREPARAMS ["JOIN", "Not enough parameters"]
+  where a = GenericAction $ \e -> sendNumeric e numERR_NEEDMOREPARAMS ["JOIN", "Not enough parameters"] >> return e
