@@ -55,8 +55,10 @@ join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ env {Env.actions=
             then M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=uid:us}) chan lcs
             else M.insert chan (Chan.Channel chan [uid] defChanModes) lcs
         nicks = map (fromMaybe "*" . Client.nick . (Env.clients l IM.!)) $ Chan.uids (newChans M.! chan)
-    aTooMany e = sendNumeric e numERR_TOOMANYCHANNELS [chan, "You have joined too many channels"] >> return e
-    aAlready e = sendNumeric e numERR_USERONCHANNEL [nick, chan, "is already on channel"] >> return e
+    aTooMany e = sendNumeric e numERR_TOOMANYCHANNELS [chan, "You have joined too many channels"]
+        >> return e
+    aAlready e = sendNumeric e numERR_USERONCHANNEL [nick, chan, "is already on channel"]
+        >> return e
       where Just nick = Client.nick (Env.client e)
     a = if notElem chan channels
         then if length channels < maxChans
