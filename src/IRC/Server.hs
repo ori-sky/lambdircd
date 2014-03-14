@@ -22,7 +22,7 @@ import Data.List (sort, delete)
 import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
-import Control.Monad ((>=>))
+import Control.Monad (forM, (>=>))
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
 import System.IO
@@ -46,7 +46,8 @@ import Plugin.Load
 
 serveIRC :: Env.Env -> IO ()
 serveIRC env = withSocketsDo $ do
-    plugins <- mapM loadPlugin pluginNames
+    plugins <- forM pluginNames $ \p -> putStrLn ("Loading plugin `" ++ p ++ "`") >> loadPlugin p
+    putStrLn "Finished loading plugins"
     sharedM <- newMVar Env.defaultShared
     let handlers = concat $ map P.handlers $ catMaybes plugins
         commandHandlers = M.fromList [(k,v) | CommandHandler k v <- handlers]
