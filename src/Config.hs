@@ -29,6 +29,7 @@ defaultCP = forceEither $ return emptyCP
     >>= add_section "listen"
     >>= set "listen"    "port"  "6667"
     >>= set "listen"    "queue" "5"
+    >>= set "listen"    "defer" "30"
     >>= add_section "client"
     >>= set "client"    "connect_timeout"   "20"
     >>= set "client"    "ping_timeout"      "240"

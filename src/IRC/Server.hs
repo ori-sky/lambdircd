@@ -62,7 +62,7 @@ serveIRC env = withSocketsDo $ do
     {- 6 = TCP option, 9 = defer accept
      - only supported on GNU systems
      -}
-    tryIOError $ setSocketOption sock (CustomSockOpt (6, 9)) 30
+    tryIOError $ setSocketOption sock (CustomSockOpt (6, 9)) deferTimeout
         >> putStrLn "Using deferred accept for connections"
     bind sock $ SockAddrInet (fromIntegral port) iNADDR_ANY
     listen sock queue
@@ -73,6 +73,7 @@ serveIRC env = withSocketsDo $ do
     pluginNames = words $ getConfigString cp "plugins" "load"
     port = getConfigInt cp "listen" "port"
     queue = getConfigInt cp "listen" "queue"
+    deferTimeout = getConfigInt cp "listen" "defer"
 
 acceptLoop :: Socket -> Env.Env-> IO ()
 acceptLoop sock env = do
