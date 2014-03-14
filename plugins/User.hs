@@ -26,17 +26,13 @@ plugin = defaultPlugin {handlers = [CommandHandler "USER" user]}
 
 user :: CommandHSpec
 user env (Message _ _ (user:_:_:realname:_))
-    | Client.registered client = do
-        let a = GenericAction $ sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
-        env {Env.actions=a:Env.actions env}
+    | Client.registered client = env {Env.actions=aMayNot:Env.actions env}
     | otherwise = env {Env.client=client {Client.user=Just user, Client.realName=Just realname}}
-  where
-    client = Env.client env
-user env _
-    | Client.registered client = do
-        let a = GenericAction $ sendNumeric env numERR_ALREADYREGISTERED ["You may not reregister"]
-        env {Env.actions=a:Env.actions env}
-    | otherwise = do
-        let a = GenericAction $ sendNumeric env numERR_NEEDMOREPARAMS ["USER", "Not enough parameters"]
-        env {Env.actions=a:Env.actions env}
   where client = Env.client env
+user env _
+    | Client.registered (Env.client env) = env {Env.actions=aMayNot:Env.actions env}
+    | otherwise = env {Env.actions=aNotEnough:Env.actions env}
+  where aNotEnough = GenericAction $ \e -> sendNumeric e numERR_NEEDMOREPARAMS ["USER", "Not enough parameters"]
+            >> return e
+
+aMayNot = GenericAction $ \e -> sendNumeric e numERR_ALREADYREGISTERED ["You may not reregister"] >> return e
