@@ -18,4 +18,5 @@ module IRC.Server.Channel where
 data Channel = Channel
     { name      :: String
     , uids      :: [Int]
+    , modes     :: [Char]
     }

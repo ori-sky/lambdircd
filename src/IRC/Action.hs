@@ -18,7 +18,9 @@ module IRC.Action where
 data Action a =
     GenericAction (a -> IO a)
   | NamedAction String (a -> IO a)
+  | ChanAction String String (a -> IO a)
 
 actionIO :: Action a -> (a -> IO a)
 actionIO (GenericAction io) = io
 actionIO (NamedAction _ io) = io
+actionIO (ChanAction _ _ io) = io
