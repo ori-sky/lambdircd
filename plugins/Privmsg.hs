@@ -31,34 +31,36 @@ import Plugin
 plugin = defaultPlugin {handlers = [CommandHandler "PRIVMSG" privmsg]}
 
 privmsg :: CommandHSpec
-privmsg env (Message _ _ (chan@('#':_):text:_)) = whenRegistered env $ do
-    let a = if M.member chan locChans
-            then if elem chan channels
-                then NamedAction "Privmsg.chan" $ sendChannelOthersFromClient client env (locChans M.! chan) $
-                        "PRIVMSG " ++ chan ++ " :" ++ text
-                else GenericAction $ sendNumeric env numERR_CANNOTSENDTOCHAN [chan, "Cannot send to channel"]
-            else GenericAction $ sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"]
-    env {Env.actions=a:Env.actions env}
+privmsg env (Message _ _ (chan@('#':_):text:_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
+  where
+    locChans = Env.channels (Env.local env)
+    channels = Client.channels (Env.client env)
+    aMsg e = do
+        sendChannelOthersFromClient (Env.client e) e (Env.channels l M.! chan) $ "PRIVMSG " ++ chan ++ " :" ++ text
+        return e
+      where l = Env.local e
+    aCannotSend e = sendNumeric env numERR_CANNOTSENDTOCHAN [chan, "Cannot send to channel"] >> return e
+    aNoSuch e = sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"] >> return e
+    a = if M.member chan locChans
+        then if elem chan channels -- TODO: move into CModeN transform handler and define ChannelAction or something
+            then NamedAction "PrivmsgChan" aMsg
+            else GenericAction aCannotSend
+        else GenericAction aNoSuch
+privmsg env (Message _ _ (target:text:_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
   where
     local = Env.local env
-    locChans = Env.channels local
-    client = Env.client env
-    channels = Client.channels client
-privmsg env (Message _ _ (target:text:_)) = whenRegistered env $ do
-    let a = if M.member targetUpper (Env.uids local)
-            then do
-                let targetClient = Env.clients local IM.! (Env.uids local M.! targetUpper)
-                    msg = ':' : show (clientToMask client) ++ " PRIVMSG " ++ target ++ " :" ++ text
-                if Client.registered targetClient
-                    then NamedAction "Privmsg.nick" $ sendClient targetClient msg
-                    else GenericAction $ sendNumeric env numERR_NOSUCHNICK [target, "No such nick"]
-            else GenericAction $ sendNumeric env numERR_NOSUCHNICK [target, "No such nick"]
-    env {Env.actions=a:Env.actions env}
-  where
     targetUpper = map toUpper target
-    local = Env.local env
-    client = Env.client env
+    targetCli = Env.clients local IM.! (Env.uids local M.! targetUpper)
+    aMsg e = do
+        sendClientFrom (show $ clientToMask (Env.client e)) targetCli $ "PRIVMSG " ++ target ++ " :" ++ text
+        return e
+    aNoSuch e = sendNumeric env numERR_NOSUCHNICK [target, "No such nick"] >> return e
+    a = if M.member targetUpper (Env.uids local)
+        then if Client.registered targetCli
+            then NamedAction "PrivmsgNick" aMsg
+            else GenericAction aNoSuch
+        else GenericAction aNoSuch
 privmsg env (Message _ _ (_:[])) = whenRegistered env $ env {Env.actions=a:Env.actions env}
-  where a = GenericAction $ sendNumeric env numERR_NOTEXTTOSEND ["No text to send"]
+  where a = GenericAction $ \e -> sendNumeric e numERR_NOTEXTTOSEND ["No text to send"] >> return e
 privmsg env _ = whenRegistered env $ env {Env.actions=a:Env.actions env}
-  where a = GenericAction $ sendNumeric env numERR_NORECIPIENT ["No recipient given (PRIVMSG)"]
+  where a = GenericAction $ \e -> sendNumeric e numERR_NORECIPIENT ["No recipient given (PRIVMSG)"] >> return e
