@@ -65,13 +65,14 @@ serveIRC env = withSocketsDo $ do
     tryIOError $ setSocketOption sock (CustomSockOpt (6, 9)) 30
         >> putStrLn "Using deferred accept for connections"
     bind sock $ SockAddrInet (fromIntegral port) iNADDR_ANY
-    listen sock 5
+    listen sock queue
     putStrLn $ "Listening on port " ++ show port
     acceptLoop sock newEnv
   where
     cp = Env.config env
     pluginNames = words $ getConfigString cp "plugins" "load"
     port = getConfigInt cp "listen" "port"
+    queue = getConfigInt cp "listen" "queue"
 
 acceptLoop :: Socket -> Env.Env-> IO ()
 acceptLoop sock env = do

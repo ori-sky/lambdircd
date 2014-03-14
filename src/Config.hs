@@ -20,16 +20,6 @@ import Data.ConfigFile.Monadic
 import Control.Monad
 import Control.Monad.Error
 
-{-
-data Config = Config
-    { plugins           :: [String]
-    , port              :: Int
-    , connectTimeout    :: Int
-    , pingTimeout       :: Int
-    , maxChannels       :: Int
-    }
--}
-
 defaultCP :: ConfigParser
 defaultCP = forceEither $ return emptyCP
     >>= add_section "info"
@@ -38,6 +28,7 @@ defaultCP = forceEither $ return emptyCP
     >>= set "info"      "description"   "A lambdircd server"
     >>= add_section "listen"
     >>= set "listen"    "port"  "6667"
+    >>= set "listen"    "queue" "5"
     >>= add_section "client"
     >>= set "client"    "connect_timeout"   "20"
     >>= set "client"    "ping_timeout"      "240"
