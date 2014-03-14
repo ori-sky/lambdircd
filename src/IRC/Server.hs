@@ -22,8 +22,8 @@ import Data.List (sort, delete)
 import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
-import Control.Monad (forM, (>=>))
-import Control.Concurrent (forkIO)
+import Control.Monad (forM, forM_, (>=>))
+import Control.Concurrent (forkIO, forkFinally)
 import Control.Concurrent.MVar
 import System.IO
 import System.IO.Error
@@ -57,11 +57,21 @@ serveIRC env = withSocketsDo $ do
             , Env.commandHandlers = commandHandlers
             , Env.transformHandlers = transformHandlers
             }
-    listenIRC newEnv
-  where pluginNames = words $ getConfigString (Env.config env) "plugins" "load"
+    let f ["*", port] = f ["0.0.0.0", port]
+        f [addr, port] = do
+            m <- newEmptyMVar
+            forkFinally (listenIRC newEnv addr (fromIntegral $ read port)) $ \_ -> putMVar m ()
+            takeMVar m
+          where
+        f _ = print "invalid value for config option `[listen] addresses`"
+    forM_ addresses f
+  where
+    cp = Env.config env
+    pluginNames = words $ getConfigString cp "plugins" "load"
+    addresses = map words $ lines $ getConfigString cp "listen" "addresses"
 
-listenIRC :: Env.Env -> IO ()
-listenIRC env = do
+listenIRC :: Env.Env -> String -> PortNumber -> IO ()
+listenIRC env addr port = do
     sock <- socket AF_INET Stream defaultProtocol
     setSocketOption sock ReuseAddr 1
     {- 6 = TCP option, 9 = defer accept
@@ -69,13 +79,13 @@ listenIRC env = do
      -}
     tryIOError $ setSocketOption sock (CustomSockOpt (6, 9)) deferTimeout
         >> putStrLn "Using deferred accept for connections"
-    bind sock $ SockAddrInet (fromIntegral port) iNADDR_ANY
+    hostAddr <- inet_addr addr
+    bind sock $ SockAddrInet port hostAddr
     listen sock queue
-    putStrLn $ "Listening on port " ++ show port
+    putStrLn $ "Listening on " ++ show addr ++ ":" ++ show port
     acceptLoop sock env
   where
     cp = Env.config env
-    port = getConfigInt cp "listen" "port"
     queue = getConfigInt cp "listen" "queue"
     deferTimeout = getConfigInt cp "listen" "defer"
 
