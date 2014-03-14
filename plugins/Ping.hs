@@ -27,10 +27,10 @@ plugin = defaultPlugin {handlers = [CommandHandler "PING" ping]}
 
 ping :: CommandHSpec
 ping env (Message _ _ (server1:_)) = env {Env.actions=a:Env.actions env}
-  where
-    client = Env.client env
-    cp = Env.config env
-    serverName = getConfigString cp "info" "name"
-    a = NamedAction "Ping.ping" $ sendClient client $ ":" ++ serverName ++ " PONG " ++ serverName++" :" ++ server1
+  where a = NamedAction "Ping.ping" $ \e -> do
+            let serverName = getConfigString (Env.config e) "info" "name"
+            sendClient (Env.client e) $ ":" ++ serverName ++ " PONG " ++ serverName++" :" ++ server1
+            return e
 ping env _ = env {Env.actions=a:Env.actions env}
-  where a = GenericAction $ sendNumeric env numERR_NEEDMOREPARAMS ["PING", "Not enough parameters"]
+  where a = GenericAction $ \e -> sendNumeric env numERR_NEEDMOREPARAMS ["PING", "Not enough parameters"]
+            >> return e
