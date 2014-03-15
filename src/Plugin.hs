@@ -31,10 +31,12 @@ data Interface = Interface
     { isPlugin  :: Bool
     , name      :: String
     , handlers  :: [Handler]
+    , cModes    :: [Char]
     }
 
 defaultPlugin = Interface
     { isPlugin  = True
     , name      = ""
     , handlers  = []
+    , cModes    = []
     }
