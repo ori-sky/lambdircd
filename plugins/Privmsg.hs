@@ -34,17 +34,13 @@ privmsg :: CommandHSpec
 privmsg env (Message _ _ (chan@('#':_):text:_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
   where
     locChans = Env.channels (Env.local env)
-    channels = Client.channels (Env.client env)
     aMsg e = do
         sendChannelOthersFromClient (Env.client e) e (Env.channels l M.! chan) $ "PRIVMSG " ++ chan ++ " :" ++ text
         return e
       where l = Env.local e
-    aCannotSend e = sendNumeric env numERR_CANNOTSENDTOCHAN [chan, "Cannot send to channel"] >> return e
-    aNoSuch e = sendNumeric env numERR_NOSUCHCHANNEL [chan, "No such channel"] >> return e
+    aNoSuch e = sendNumeric e numERR_NOSUCHCHANNEL [chan, "No such channel"] >> return e
     a = if M.member chan locChans
-        then if elem chan channels -- TODO: move into CModeN transform handler and define ChannelAction or something
-            then NamedAction "PrivmsgChan" aMsg
-            else GenericAction aCannotSend
+        then ChanAction "Privmsg" chan aMsg
         else GenericAction aNoSuch
 privmsg env (Message _ _ (target:text:_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
   where
