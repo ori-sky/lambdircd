@@ -51,10 +51,10 @@ serveIRC env = withSocketsDo $ do
     putStrLn "Finished loading plugins"
     sharedM <- newMVar Env.defaultShared
     let plugins = catMaybes pluginMaybes
-        handlers = concat $ map P.handlers plugins
+        handlers = concatMap P.handlers plugins
         commandHandlers = M.fromList [(k,v) | CommandHandler k v <- handlers]
         transformHandlers = [v | TransformHandler v <- handlers]
-        cModes = concat $ map P.cModes plugins
+        cModes = concatMap P.cModes plugins
         newEnv = env
             { Env.shared = Just sharedM
             , Env.commandHandlers = commandHandlers
