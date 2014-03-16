@@ -47,16 +47,19 @@ import Plugin.Load
 
 serveIRC :: Env.Env -> IO ()
 serveIRC env = withSocketsDo $ do
-    plugins <- forM pluginNames $ \p -> putStrLn ("Loading plugin `" ++ p ++ "`") >> loadPlugin p
+    pluginMaybes <- forM pluginNames $ \p -> putStrLn ("Loading plugin `" ++ p ++ "`") >> loadPlugin p
     putStrLn "Finished loading plugins"
     sharedM <- newMVar Env.defaultShared
-    let handlers = concat $ map P.handlers $ catMaybes plugins
+    let plugins = catMaybes pluginMaybes
+        handlers = concat $ map P.handlers plugins
         commandHandlers = M.fromList [(k,v) | CommandHandler k v <- handlers]
         transformHandlers = [v | TransformHandler v <- handlers]
+        cModes = concat $ map P.cModes plugins
         newEnv = env
             { Env.shared = Just sharedM
             , Env.commandHandlers = commandHandlers
             , Env.transformHandlers = transformHandlers
+            , Env.cModes = cModes
             }
     let f ["*", port] = f ["0.0.0.0", port]
         f [addr, port] = do

@@ -41,22 +41,24 @@ defaultShared = Shared
 data Env = Env
     { config            :: ConfigParser
     , client            :: Client
-    , commandHandlers   :: M.Map String (Env -> Message -> Env)
-    , transformHandlers :: [Env -> Env]
     , shared            :: Maybe (MVar Shared)
     , local             :: Shared
     , actions           :: [Action Env]
+    , commandHandlers   :: M.Map String (Env -> Message -> Env)
+    , transformHandlers :: [Env -> Env]
+    , cModes            :: [Char]
     }
 
 defaultEnv :: Env
 defaultEnv = Env
     { config            = emptyCP
     , client            = defaultClient
-    , commandHandlers   = M.empty
-    , transformHandlers = []
     , shared            = Nothing
     , local             = defaultShared
     , actions           = []
+    , commandHandlers   = M.empty
+    , transformHandlers = []
+    , cModes            = []
     }
 
 whenRegistered :: Env -> Env -> Env
