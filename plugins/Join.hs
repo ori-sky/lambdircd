@@ -23,6 +23,7 @@ import IRC.Numeric
 import IRC.Action
 import qualified IRC.Server.Client as Client
 import qualified IRC.Server.Channel as Chan
+import IRC.Server.Client.Helper
 import IRC.Server.Channel.Helper
 import IRC.Server.Environment (whenRegistered)
 import qualified IRC.Server.Environment as Env
@@ -34,10 +35,13 @@ plugin = defaultPlugin {handlers=[CommandHandler "JOIN" join]}
 join :: CommandHSpec
 join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
   where
-    defChanModes = getConfigString (Env.config env) "channel" "default_modes"
+    cp = Env.config env
+    defChanModes = getConfigString cp "channel" "default_modes"
+    serverName = getConfigString cp "info" "name"
     channels = Client.channels (Env.client env)
     aJoin e = do
-        sendChannelFromClient (Env.client e) e (newChans M.! chan) $ "JOIN " ++ chan
+        sendChannelFromClient cli e newChan $ "JOIN " ++ chan
+        sendClientFrom serverName cli $ "MODE " ++ chan ++ " +" ++ Chan.modes newChan
         sendNumeric e numRPL_NAMREPLY ["=", chan, unwords nicks]
         sendNumeric e numRPL_ENDOFNAMES [chan, "End of /NAMES list"]
         return e
@@ -53,6 +57,7 @@ join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ env {Env.actions=
             then M.adjust (\c@(Chan.Channel {Chan.uids=us}) -> c {Chan.uids=uid:us}) chan lcs
             else M.insert chan (Chan.Channel chan [uid] defChanModes) lcs
         nicks = map (fromMaybe "*" . Client.nick . (Env.clients l IM.!)) $ Chan.uids (newChans M.! chan)
+        newChan = newChans M.! chan
     aAlready e = sendNumeric e numERR_USERONCHANNEL [nick, chan, "is already on channel"]
         >> return e
       where Just nick = Client.nick (Env.client e)
