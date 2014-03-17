@@ -13,11 +13,13 @@
  - limitations under the License.
  -}
 
-module CModeN where
+module CModeNoExternal where
 
+import qualified Data.Map as M
 import IRC.Numeric
 import IRC.Action
 import qualified IRC.Server.Client as Client
+import qualified IRC.Server.Channel as Chan
 import qualified IRC.Server.Environment as Env
 import Plugin
 
@@ -27,8 +29,9 @@ trans :: TransformHSpec
 trans env = env {Env.actions=map f (Env.actions env)}
   where
     channels = Client.channels (Env.client env)
-    f a@(ChanAction "Privmsg" chan _) = if elem chan channels
+    f a@(ChanAction "Privmsg" chanName _) = if notElem 'n' (Chan.modes chan) || elem chanName channels
         then a
-        else GenericAction $ \e -> sendNumeric e numERR_CANNOTSENDTOCHAN [chan, "Cannot send to channel"]
+        else GenericAction $ \e -> sendNumeric e numERR_CANNOTSENDTOCHAN [chanName, "Cannot send to channel"]
             >> return e
+      where chan = Env.channels (Env.local env) M.! chanName
     f a = a
