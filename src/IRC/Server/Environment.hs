@@ -22,13 +22,14 @@ import IRC.Action
 import IRC.Message (Message)
 import IRC.Server.Client (Client, defaultClient)
 import IRC.Server.Client.Helper
+import IRC.Server.Channel (Channel)
 import qualified IRC.Server.Channel as Chan
-import Data.ConfigFile.Monadic
+import Data.ConfigFile.Monadic (ConfigParser, emptyCP)
 
 data Shared = Shared
     { clients   :: IM.IntMap Client
     , uids      :: M.Map String Int
-    , channels  :: M.Map String Chan.Channel
+    , channels  :: M.Map String Channel
     }
 
 defaultShared :: Shared
@@ -46,7 +47,7 @@ data Env = Env
     , actions           :: [Action Env]
     , commandHandlers   :: M.Map String (Env -> Message -> Env)
     , transformHandlers :: [Env -> Env]
-    , cModes            :: [Char]
+    , cModes            :: [Chan.Mode]
     }
 
 defaultEnv :: Env

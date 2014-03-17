@@ -18,6 +18,7 @@
 module Plugin where
 
 import IRC.Message (Message)
+import qualified IRC.Server.Channel as Chan
 import IRC.Server.Environment (Env)
 
 type CommandHSpec   = Env -> Message -> Env
@@ -31,7 +32,7 @@ data Interface = Interface
     { isPlugin  :: Bool
     , name      :: String
     , handlers  :: [Handler]
-    , cModes    :: [Char]
+    , cModes    :: [Chan.Mode]
     }
 
 defaultPlugin = Interface

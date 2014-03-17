@@ -15,6 +15,14 @@
 
 module IRC.Server.Channel where
 
+data ModeClass =
+    ModeList
+  | Param
+  | OnParam
+  | None
+
+data Mode = Mode Char ModeClass
+
 data Channel = Channel
     { name      :: String
     , uids      :: [Int]
