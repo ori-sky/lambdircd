@@ -19,8 +19,8 @@ import Data.List (delete, nub)
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import Control.Monad (unless, forM_)
-import IRC.Server.Client.Helper
 import qualified IRC.Server.Client as Cli
+import IRC.Server.Client.Helper
 import IRC.Server.Channel
 import qualified IRC.Server.Environment as Env
 
