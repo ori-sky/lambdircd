@@ -15,6 +15,7 @@
 
 module Join where
 
+import Data.List (nub)
 import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
@@ -36,7 +37,7 @@ join :: CommandHSpec
 join env (Message _ _ (chan@('#':_):_)) = whenRegistered env $ env {Env.actions=a:Env.actions env}
   where
     cp = Env.config env
-    defChanModes = getConfigString cp "channel" "default_modes"
+    defChanModes = nub $ getConfigString cp "channel" "default_modes"
     serverName = getConfigString cp "info" "name"
     channels = Client.channels (Env.client env)
     aJoin e = do
