@@ -13,7 +13,23 @@
  - limitations under the License.
  -}
 
-import IRCD.Server
+module IRCD.Types.Client where
 
-main :: IO ()
-main = serveIRC
+data Client = Client
+    { uid           :: Maybe Int
+    , nick          :: Maybe String
+    , user          :: Maybe String
+    , realName      :: Maybe String
+    , host          :: Maybe String
+    , registered    :: Bool
+    } deriving (Show)
+
+defaultClient :: Client
+defaultClient = Client
+    { uid           = Nothing
+    , nick          = Nothing
+    , user          = Nothing
+    , realName      = Nothing
+    , host          = Nothing
+    , registered    = False
+    }

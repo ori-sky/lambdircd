@@ -13,7 +13,11 @@
  - limitations under the License.
  -}
 
-import IRCD.Server
+import IRC.Server as IRCD
+import IRC.Server.Environment
+import Config
 
 main :: IO ()
-main = serveIRC
+main = do
+    cp <- loadConfig "ircd.conf"
+    serveIRC defaultEnv {config=cp}

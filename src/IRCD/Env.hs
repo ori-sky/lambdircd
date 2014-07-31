@@ -13,7 +13,10 @@
  - limitations under the License.
  -}
 
-import IRCD.Server
+module IRCD.Env (mapClients) where
 
-main :: IO ()
-main = serveIRC
+import IRCD.Types.Env
+import IRCD.Types.Clients
+
+mapClients :: (Clients -> Clients) -> Env -> Env
+mapClients f env = env {clients = f (clients env)}

@@ -1,5 +1,5 @@
 EXECUTABLE=lambdircd
-FLAGS=-W -O2 -threaded
+FLAGS=-W -O2
 CFLAGS=
 
 all: build-plugins build

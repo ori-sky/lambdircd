@@ -13,7 +13,19 @@
  - limitations under the License.
  -}
 
-import IRCD.Server
+module IRCD.Types.Clients (Clients(..), defaultClients) where
 
-main :: IO ()
-main = serveIRC
+import qualified Data.Map as M (Map, empty)
+import qualified Data.IntMap as IM (IntMap, empty)
+import IRCD.Types.Client
+
+data Clients = Clients
+    { byUid     :: IM.IntMap Client
+    , byNick    :: M.Map String Client
+    } deriving (Show)
+
+defaultClients :: Clients
+defaultClients = Clients
+    { byUid     = IM.empty
+    , byNick    = M.empty
+    }

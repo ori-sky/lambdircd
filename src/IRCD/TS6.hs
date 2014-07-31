@@ -13,7 +13,14 @@
  - limitations under the License.
  -}
 
-import IRCD.Server
+module IRCD.TS6 (intToID) where
 
-main :: IO ()
-main = serveIRC
+import Numeric (showIntAtBase)
+import Data.Char (intToDigit)
+import Text.Printf (printf)
+
+intToID :: Int -> String
+intToID x = 'A' : printf "%05s" (showIntAtBase 36 toChr x "")
+  where toChr c
+            | 0 <= c && c <= 9 = intToDigit c
+            | otherwise = toEnum (c + (65 - 10))

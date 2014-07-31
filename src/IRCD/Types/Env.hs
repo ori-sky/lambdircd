@@ -13,7 +13,15 @@
  - limitations under the License.
  -}
 
-import IRCD.Server
+module IRCD.Types.Env where
 
-main :: IO ()
-main = serveIRC
+import IRCD.Types.Clients
+
+data Env = Env
+    { clients :: Clients
+    } deriving Show
+
+defaultEnv :: Env
+defaultEnv = Env
+    { clients = defaultClients
+    }
