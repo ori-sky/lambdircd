@@ -13,8 +13,6 @@
  - limitations under the License.
  -}
 
-{-# LANGUAGE LambdaCase #-}
-
 module IRCD.Server where
 
 import Control.Monad.State
