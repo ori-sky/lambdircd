@@ -17,18 +17,19 @@
 
 module IRCD.Server (serveIRC) where
 
+import qualified Data.IntMap as IM ((!))
 import Control.Monad.State
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
 import Network.Socket
 import System.IO
 import System.IO.Error (tryIOError)
-import qualified IRCD.TS6 as TS6
-import IRCD.Numeric
 import IRCD.Types.Env (Env, clients, defaultEnv)
 import IRCD.Types.Client (uid, defaultClient)
+import IRCD.Types.Clients (byUid)
 import IRCD.Clients (firstAvailableID, insertClient, deleteClientByUid)
 import IRCD.Env (mapClients)
+import IRCD.Logic (doLogic)
 
 data Notification = Accept Handle
                   | Recv Int String
@@ -77,6 +78,8 @@ mainLoop chan sock = do
             uid' <- gets clients >>= return . firstAvailableID
             modify $ mapClients (insertClient defaultClient {uid=Just uid'})
             void $ liftIO $ forkIO (inputLoop chan sock handle uid')
-        Recv uid' line -> liftIO $ putStrLn ("[::" ++ TS6.intToID uid' ++ "] " ++ line)
+        Recv uid' line -> do
+            client <- gets $ (IM.! uid') . byUid . clients
+            doLogic client line
         Disconnect uid' -> modify $ mapClients (deleteClientByUid uid')
     mainLoop chan sock
