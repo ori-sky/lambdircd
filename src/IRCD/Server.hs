@@ -24,6 +24,7 @@ import Network.Socket
 import System.IO
 import System.IO.Error (tryIOError)
 import qualified IRCD.TS6 as TS6
+import IRCD.Numeric
 import IRCD.Types.Env (Env, clients, defaultEnv)
 import IRCD.Types.Client (uid, defaultClient)
 import IRCD.Clients (firstAvailableID, insertClient, deleteClientByUid)
