@@ -13,7 +13,9 @@
  - limitations under the License.
  -}
 
-module IRCD.Server where
+{-# LANGUAGE LambdaCase #-}
+
+module IRCD.Server (serveIRC) where
 
 import Control.Monad.State
 import Control.Concurrent (forkIO)
@@ -22,13 +24,14 @@ import Network.Socket
 import System.IO
 import System.IO.Error (tryIOError)
 import qualified IRCD.TS6 as TS6
-import IRCD.Types.Env (Env, defaultEnv)
+import IRCD.Types.Env (Env, clients, defaultEnv)
 import IRCD.Types.Client (uid, defaultClient)
-import IRCD.Clients (insertClient)
+import IRCD.Clients (firstAvailableID, insertClient, deleteClientByUid)
 import IRCD.Env (mapClients)
 
 data Notification = Accept Handle
                   | Recv Int String
+                  | Disconnect Int
                     deriving Show
 
 serveIRC :: IO ()
@@ -37,7 +40,7 @@ serveIRC = do
     setSocketOption sock NoDelay 1
     setSocketOption sock ReuseAddr 1
     {- 6 = TCP option, 9 = defer accept
-     - only supported on GNU systems
+     - only supported on Linux systems
      -}
     tryIOError $ setSocketOption sock (CustomSockOpt (6, 9)) 30
         >> putStrLn "Using deferred accept for connections"
@@ -60,16 +63,19 @@ acceptLoop chan sock = do
     acceptLoop chan sock
 
 inputLoop :: Chan Notification -> Socket -> Handle -> Int -> IO ()
-inputLoop chan sock handle uid = do
-    hGetLine handle >>= writeChan chan . Recv uid
-    inputLoop chan sock handle uid
+inputLoop chan sock handle uid' = do
+    tryIOError (hGetLine handle >>= writeChan chan . Recv uid') >>= \case
+        Left _ -> tryIOError (hClose handle) >> writeChan chan (Disconnect uid')
+        _ -> inputLoop chan sock handle uid'
 
 mainLoop :: Chan Notification -> Socket -> StateT Env IO ()
 mainLoop chan sock = do
     note <- liftIO (readChan chan)
     case note of
         Accept handle -> do
-            modify $ mapClients (insertClient defaultClient {uid=Just 5000})
-            void $ liftIO $ forkIO (inputLoop chan sock handle 5000)
-        Recv uid line -> liftIO $ putStrLn ("[::" ++ TS6.intToID uid ++ "] " ++ line)
+            uid' <- gets clients >>= return . firstAvailableID
+            modify $ mapClients (insertClient defaultClient {uid=Just uid'})
+            void $ liftIO $ forkIO (inputLoop chan sock handle uid')
+        Recv uid' line -> liftIO $ putStrLn ("[::" ++ TS6.intToID uid' ++ "] " ++ line)
+        Disconnect uid' -> modify $ mapClients (deleteClientByUid uid')
     mainLoop chan sock
