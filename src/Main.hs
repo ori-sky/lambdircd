@@ -14,7 +14,7 @@
  -}
 
 import Data.Maybe (catMaybes)
-import IRCD.Types.Plugin
+import IRCD.Types
 import IRCD.Server
 import IRCD.Plugin.Load
 

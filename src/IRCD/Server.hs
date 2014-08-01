@@ -24,8 +24,7 @@ import Control.Concurrent.Chan
 import Network.Socket
 import System.IO
 import System.IO.Error (tryIOError)
-import IRCD.Types.Server
-import IRCD.Types.Plugin
+import IRCD.Types
 import IRCD.Clients (firstAvailableID, insertClient, deleteClientByUid)
 import IRCD.Env (mapEnvClients)
 import IRCD.Logic (doLogic)
@@ -50,7 +49,7 @@ serveIRC plugins = do
     putStrLn $ "Listening on 0.0.0.0" ++ ":6667"
     chan <- newChan
     forkIO (acceptLoop chan sock)
-    evalStateT (mainLoop chan sock) defaultEnv
+    evalStateT (main plugins chan sock) defaultEnv
 
 acceptLoop :: Chan Notification -> Socket -> IO ()
 acceptLoop chan sock = do
@@ -68,6 +67,12 @@ inputLoop chan sock handle' uid' = do
     tryIOError (hGetLine handle' >>= writeChan chan . Recv uid') >>= \case
         Left _ -> tryIOError (hClose handle') >> writeChan chan (Disconnect uid')
         _ -> inputLoop chan sock handle' uid'
+
+main :: [Plugin] -> Chan Notification -> Socket -> StateT Env IO ()
+main plugins chan sock = do
+    mapM_ startup plugins
+    -- TODO: load handlers and transformers into Env
+    mainLoop chan sock
 
 mainLoop :: Chan Notification -> Socket -> StateT Env IO ()
 mainLoop chan sock = do

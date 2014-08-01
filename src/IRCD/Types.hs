@@ -13,11 +13,35 @@
  - limitations under the License.
  -}
 
-module IRCD.Types.Server where
+module IRCD.Types where
 
 import qualified Data.Map as M (Map, empty)
 import qualified Data.IntMap as IM (IntMap, empty)
+import Control.Monad.State
 import System.IO (Handle)
+
+data Message = Message
+    { tags      :: () -- TODO: support message tags
+    , prefix    :: Maybe Prefix
+    , command   :: String
+    , params    :: [String]
+    } deriving Show
+
+data Prefix = StringPrefix String
+            | MaskPrefix Hostmask
+              deriving Eq
+
+instance Show Prefix where
+    show (StringPrefix p) = p
+    show (MaskPrefix p) = show p
+
+data Hostmask = Hostmask
+    { maskNick  :: String
+    , maskUser  :: String
+    , maskHost  :: String
+    } deriving Eq
+
+instance Show Hostmask where show (Hostmask n u h) = n ++ '!' : u ++ '@' : h
 
 data Client = Client
     { uid           :: Maybe Int
@@ -36,17 +60,38 @@ data Clients = Clients
     } deriving Show
 
 data Channel = Channel
-    { name      :: String
-    , modes     :: [Char]
-    , clients   :: [Client]
+    { name    :: String
+    , modes   :: [Char]
+    , clients :: [Client]
     } deriving (Show, Eq)
 
 data Source = ClientSrc Client
 data Destination = ChannelDst Channel
 
 data Env = Env
-    { envClients :: Clients
-    } deriving Show
+    { envClients        :: Clients
+    , envHandlers       :: [Handler]
+    , envTransformers   :: [Transformer]
+    }
+
+data Plugin = Plugin
+    { pluginName    :: String
+    , startup       :: StateT Env IO ()
+    , shutdown      :: StateT Env IO ()
+    , handlers      :: [Handler]
+    , transformers  :: [Transformer]
+    }
+
+type HandlerSpec = Source -> Message -> State Env [Action]
+data Handler = GenericHandler HandlerSpec
+             | CommandHandler String HandlerSpec
+
+type TransformerSpec = Action -> State Env [Action]
+data Transformer = Transformer TransformerSpec Int
+
+type ActionSpec = StateT Env IO ()
+data Action = GenericAction ActionSpec
+            | PrivmsgAction Source Destination Message ActionSpec
 
 defaultClient :: Client
 defaultClient = Client
@@ -70,3 +115,15 @@ defaultEnv :: Env
 defaultEnv = Env
     { envClients = defaultClients
     }
+
+defaultPlugin :: Plugin
+defaultPlugin = Plugin
+    { pluginName    = ""
+    , startup       = return ()
+    , shutdown      = return ()
+    , handlers      = []
+    , transformers  = []
+    }
+
+defaultTransformer :: TransformerSpec -> Transformer
+defaultTransformer f = Transformer f 100

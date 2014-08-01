@@ -18,11 +18,11 @@
 module IRCD.Plugin.Load where
 
 import System.Plugins.Load
-import IRCD.Types.Plugin
+import IRCD.Types
 
 loadPlugin :: String -> IO (Maybe Plugin)
 loadPlugin name' = load_ ("plugins/" ++ name' ++ ".o") ["src"] "plugin" >>= \case
-    LoadSuccess _ plugin -> return $ Just $ case name plugin of
-        "" -> plugin {name=name'}
+    LoadSuccess _ plugin -> return $ Just $ case pluginName plugin of
+        "" -> plugin {pluginName=name'}
         _  -> plugin
     LoadFailure e -> mapM_ putStrLn e >> return Nothing

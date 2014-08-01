@@ -19,7 +19,7 @@ import qualified Data.IntMap as IM (toList)
 import Control.Monad.State
 import System.IO (hPutStrLn)
 import qualified IRCD.TS6 as TS6
-import IRCD.Types.Server
+import IRCD.Types
 import IRCD.Message
 
 doLogic :: Client -> String -> StateT Env IO ()

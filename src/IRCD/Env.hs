@@ -15,7 +15,13 @@
 
 module IRCD.Env (mapEnvClients) where
 
-import IRCD.Types.Server (Clients, Env, envClients)
+import IRCD.Types
 
 mapEnvClients :: (Clients -> Clients) -> Env -> Env
 mapEnvClients f env = env {envClients = f (envClients env)}
+
+mapHandlers :: ([Handler] -> [Handler]) -> Env -> Env
+mapHandlers f env = env {envHandlers = f (envHandlers env)}
+
+mapTransformers :: ([Transformer] -> [Transformer]) -> Env -> Env
+mapTransformers f env = env {envTransformers = f (envTransformers env)}

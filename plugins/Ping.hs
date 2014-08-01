@@ -16,8 +16,7 @@
 module Ping (plugin) where
 
 import Control.Monad.State (liftIO)
-import IRCD.Types.Plugin
-import IRCD.Types.Message
+import IRCD.Types
 
 plugin :: Plugin
 plugin = defaultPlugin {handlers=[CommandHandler "PING" ping]}

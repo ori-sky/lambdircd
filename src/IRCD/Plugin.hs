@@ -16,7 +16,7 @@
 module IRCD.Plugin (registerCMode) where
 
 import Control.Monad.State
-import IRCD.Types.Server (Env)
+import IRCD.Types
 
 registerCMode :: Char -> StateT Env IO ()
 registerCMode = undefined

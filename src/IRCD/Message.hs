@@ -16,8 +16,7 @@
 module IRCD.Message (parseMessage) where
 
 import Data.Char (isSpace, toUpper)
-import IRCD.Types.Message
-import IRCD.Types.Prefix
+import IRCD.Types
 
 parseMessage :: String -> Message
 parseMessage "" = Message () Nothing "" []
