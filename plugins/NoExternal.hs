@@ -16,7 +16,6 @@
 module NoExternal (plugin) where
 
 import IRCD.Types.Plugin
-import IRCD.Types.Action
 import IRCD.Types.Server
 
 plugin :: Plugin

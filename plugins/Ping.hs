@@ -17,7 +17,6 @@ module Ping (plugin) where
 
 import Control.Monad.State (liftIO)
 import IRCD.Types.Plugin
-import IRCD.Types.Action
 import IRCD.Types.Message
 
 plugin :: Plugin

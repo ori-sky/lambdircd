@@ -16,20 +16,8 @@
 module IRCD.Types.Plugin where
 
 import Control.Monad.State
-import IRCD.Types.Action
 import IRCD.Types.Message (Message)
 import IRCD.Types.Server hiding (name)
-
-type HandlerSpec = Source -> Message -> State Env [Action]
-type TransformerSpec = Action -> State Env [Action]
-
-data Handler = GenericHandler HandlerSpec
-             | CommandHandler String HandlerSpec
-
-data Transformer = Transformer TransformerSpec Int
-
-defaultTransformer :: TransformerSpec -> Transformer
-defaultTransformer f = Transformer f 100
 
 data Plugin = Plugin
     { name          :: String
@@ -37,9 +25,23 @@ data Plugin = Plugin
     , transformers  :: [Transformer]
     }
 
+type HandlerSpec = Source -> Message -> State Env [Action]
+data Handler = GenericHandler HandlerSpec
+             | CommandHandler String HandlerSpec
+
+type TransformerSpec = Action -> State Env [Action]
+data Transformer = Transformer TransformerSpec Int
+
+type ActionSpec = StateT Env IO ()
+data Action = GenericAction ActionSpec
+            | PrivmsgAction Source Destination Message ActionSpec
+
 defaultPlugin :: Plugin
 defaultPlugin = Plugin
     { name          = ""
     , handlers      = []
     , transformers  = []
     }
+
+defaultTransformer :: TransformerSpec -> Transformer
+defaultTransformer f = Transformer f 100
