@@ -19,13 +19,11 @@ import qualified Data.IntMap as IM (toList)
 import Control.Monad.State
 import System.IO (hPutStrLn)
 import qualified IRCD.TS6 as TS6
-import IRCD.Types.Env (Env, clients)
-import IRCD.Types.Client (Client, uid, handle)
-import IRCD.Types.Clients (byUid)
+import IRCD.Types.Server
 
 doLogic :: Client -> String -> StateT Env IO ()
 doLogic client line = do
-    handles' <- gets (byUid . clients) >>= return . map (handle . snd) . IM.toList
+    handles' <- gets (byUid . envClients) >>= return . map (handle . snd) . IM.toList
     liftIO (mapM_ f handles')
   where f Nothing = return ()
         f (Just handle') = hPutStrLn handle' $ "[::" ++ uidString ++ "] " ++ line

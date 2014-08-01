@@ -13,10 +13,11 @@
  - limitations under the License.
  -}
 
-module IRCD.Types.Client where
+module IRCD.Types.Server where
 
+import qualified Data.Map as M (Map, empty)
+import qualified Data.IntMap as IM (IntMap, empty)
 import System.IO (Handle)
-import IRCD.Types.Channel (Channel)
 
 data Client = Client
     { uid           :: Maybe Int
@@ -27,7 +28,25 @@ data Client = Client
     , realName      :: Maybe String
     , host          :: Maybe String
     , channels      :: [Channel]
-    } deriving (Show)
+    } deriving (Show, Eq)
+
+data Clients = Clients
+    { byUid     :: IM.IntMap Client
+    , byNick    :: M.Map String Client
+    } deriving Show
+
+data Channel = Channel
+    { name      :: String
+    , modes     :: [Char]
+    , clients   :: [Client]
+    } deriving (Show, Eq)
+
+data Source = ClientSrc Client
+data Destination = ChannelDst Channel
+
+data Env = Env
+    { envClients :: Clients
+    } deriving Show
 
 defaultClient :: Client
 defaultClient = Client
@@ -39,4 +58,15 @@ defaultClient = Client
     , realName      = Nothing
     , host          = Nothing
     , channels      = []
+    }
+
+defaultClients :: Clients
+defaultClients = Clients
+    { byUid     = IM.empty
+    , byNick    = M.empty
+    }
+
+defaultEnv :: Env
+defaultEnv = Env
+    { envClients = defaultClients
     }

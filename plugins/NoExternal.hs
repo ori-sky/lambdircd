@@ -17,13 +17,13 @@ module NoExternal (plugin) where
 
 import IRCD.Types.Plugin
 import IRCD.Types.Action
-import IRCD.Types.Destination
+import IRCD.Types.Server
 
 plugin :: Plugin
 plugin = defaultPlugin {transformers=[Transformer noExt 50]}
 
 noExt :: TransformerSpec
-noExt action@(PrivmsgAction src (ChannelDst channel) msg io)
+noExt action@(PrivmsgAction (ClientSrc client) (ChannelDst channel) msg io)
     | 'n' `elem` modes channel && channel `notElem` channels client = return []
     | otherwise = return [action]
 noExt action = return [action]

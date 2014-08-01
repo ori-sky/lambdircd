@@ -16,10 +16,8 @@
 module IRCD.Types.Action where
 
 import Control.Monad.State
-import IRCD.Types.Env
 import IRCD.Types.Message
-import IRCD.Types.Source
-import IRCD.Types.Destination
+import IRCD.Types.Server
 
 type ActionSpec = StateT Env IO ()
 

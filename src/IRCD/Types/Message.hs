@@ -16,7 +16,7 @@
 module IRCD.Types.Message where
 
 import IRCD.Types.Prefix (Prefix)
-import IRCD.Types.Client (Client)
+import IRCD.Types.Server
 
 data Message = Message
     { tags      :: () -- TODO: support message tags

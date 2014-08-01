@@ -13,10 +13,9 @@
  - limitations under the License.
  -}
 
-module IRCD.Env (mapClients) where
+module IRCD.Env (mapEnvClients) where
 
-import IRCD.Types.Env
-import IRCD.Types.Clients
+import IRCD.Types.Server (Clients, Env, envClients)
 
-mapClients :: (Clients -> Clients) -> Env -> Env
-mapClients f env = env {clients = f (clients env)}
+mapEnvClients :: (Clients -> Clients) -> Env -> Env
+mapEnvClients f env = env {envClients = f (envClients env)}

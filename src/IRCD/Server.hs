@@ -24,11 +24,9 @@ import Control.Concurrent.Chan
 import Network.Socket
 import System.IO
 import System.IO.Error (tryIOError)
-import IRCD.Types.Env (Env, clients, defaultEnv)
-import IRCD.Types.Client (uid, handle, defaultClient)
-import IRCD.Types.Clients (byUid)
+import IRCD.Types.Server
 import IRCD.Clients (firstAvailableID, insertClient, deleteClientByUid)
-import IRCD.Env (mapClients)
+import IRCD.Env (mapEnvClients)
 import IRCD.Logic (doLogic)
 
 data Notification = Accept Handle
@@ -75,12 +73,12 @@ mainLoop chan sock = do
     note <- liftIO (readChan chan)
     case note of
         Accept handle' -> do
-            uid' <- gets clients >>= return . firstAvailableID
-            modify $ mapClients $ insertClient defaultClient
+            uid' <- gets envClients >>= return . firstAvailableID
+            modify $ mapEnvClients $ insertClient defaultClient
                 {uid=Just uid', handle=Just handle'}
             void $ liftIO $ forkIO (inputLoop chan sock handle' uid')
         Recv uid' line -> do
-            client <- gets $ (IM.! uid') . byUid . clients
+            client <- gets $ (IM.! uid') . byUid . envClients
             doLogic client line
-        Disconnect uid' -> modify $ mapClients (deleteClientByUid uid')
+        Disconnect uid' -> modify $ mapEnvClients (deleteClientByUid uid')
     mainLoop chan sock

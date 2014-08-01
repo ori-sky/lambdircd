@@ -16,10 +16,9 @@
 module IRCD.Types.Plugin where
 
 import Control.Monad.State
-import IRCD.Types.Env (Env)
 import IRCD.Types.Action
 import IRCD.Types.Message (Message)
-import IRCD.Types.Source
+import IRCD.Types.Server hiding (name)
 
 type HandlerSpec = Source -> Message -> State Env [Action]
 type TransformerSpec = Action -> State Env [Action]

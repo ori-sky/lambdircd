@@ -20,8 +20,7 @@ where
 import Data.List (sort)
 import qualified Data.Map as M (insert, delete)
 import qualified Data.IntMap as IM (keys, insert, delete)
-import IRCD.Types.Client
-import IRCD.Types.Clients
+import IRCD.Types.Server
 
 firstAvailableID :: Clients -> Int
 firstAvailableID = f 1 . sort . IM.keys . byUid
