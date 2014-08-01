@@ -20,11 +20,13 @@ import Control.Monad.State
 import System.IO (hPutStrLn)
 import qualified IRCD.TS6 as TS6
 import IRCD.Types.Server
+import IRCD.Message
 
 doLogic :: Client -> String -> StateT Env IO ()
 doLogic client line = do
     handles' <- gets (byUid . envClients) >>= return . map (handle . snd) . IM.toList
     liftIO (mapM_ f handles')
+    liftIO $ print (parseMessage line)
   where f Nothing = return ()
         f (Just handle') = hPutStrLn handle' $ "[::" ++ uidString ++ "] " ++ line
         uidString = maybe "*" TS6.intToID (uid client)
