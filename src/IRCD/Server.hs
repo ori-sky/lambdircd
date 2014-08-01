@@ -25,7 +25,7 @@ import Network.Socket
 import System.IO
 import System.IO.Error (tryIOError)
 import IRCD.Types.Env (Env, clients, defaultEnv)
-import IRCD.Types.Client (uid, defaultClient)
+import IRCD.Types.Client (uid, handle, defaultClient)
 import IRCD.Types.Clients (byUid)
 import IRCD.Clients (firstAvailableID, insertClient, deleteClientByUid)
 import IRCD.Env (mapClients)
@@ -46,9 +46,9 @@ serveIRC = do
      -}
     tryIOError $ setSocketOption sock (CustomSockOpt (6, 9)) 30
         >> putStrLn "Using deferred accept for connections"
-    inet_addr "127.0.0.1" >>= bind sock . SockAddrInet 6667
+    inet_addr "0.0.0.0" >>= bind sock . SockAddrInet 6667
     listen sock 5
-    putStrLn $ "Listening on 127.0.0.1" ++ ":6667"
+    putStrLn $ "Listening on 0.0.0.0" ++ ":6667"
     chan <- newChan
     forkIO (acceptLoop chan sock)
     evalStateT (mainLoop chan sock) defaultEnv
@@ -57,27 +57,28 @@ acceptLoop :: Chan Notification -> Socket -> IO ()
 acceptLoop chan sock = do
     tryIOError $ do
         (clientSock, sockAddr) <- accept sock
-        handle <- socketToHandle clientSock ReadWriteMode
-        hSetNewlineMode handle universalNewlineMode
-        hSetBuffering handle LineBuffering
-        hSetEncoding handle utf8
-        writeChan chan (Accept handle)
+        handle' <- socketToHandle clientSock ReadWriteMode
+        hSetNewlineMode handle' universalNewlineMode
+        hSetBuffering handle' LineBuffering
+        hSetEncoding handle' utf8
+        writeChan chan (Accept handle')
     acceptLoop chan sock
 
 inputLoop :: Chan Notification -> Socket -> Handle -> Int -> IO ()
-inputLoop chan sock handle uid' = do
-    tryIOError (hGetLine handle >>= writeChan chan . Recv uid') >>= \case
-        Left _ -> tryIOError (hClose handle) >> writeChan chan (Disconnect uid')
-        _ -> inputLoop chan sock handle uid'
+inputLoop chan sock handle' uid' = do
+    tryIOError (hGetLine handle' >>= writeChan chan . Recv uid') >>= \case
+        Left _ -> tryIOError (hClose handle') >> writeChan chan (Disconnect uid')
+        _ -> inputLoop chan sock handle' uid'
 
 mainLoop :: Chan Notification -> Socket -> StateT Env IO ()
 mainLoop chan sock = do
     note <- liftIO (readChan chan)
     case note of
-        Accept handle -> do
+        Accept handle' -> do
             uid' <- gets clients >>= return . firstAvailableID
-            modify $ mapClients (insertClient defaultClient {uid=Just uid'})
-            void $ liftIO $ forkIO (inputLoop chan sock handle uid')
+            modify $ mapClients $ insertClient defaultClient
+                {uid=Just uid', handle=Just handle'}
+            void $ liftIO $ forkIO (inputLoop chan sock handle' uid')
         Recv uid' line -> do
             client <- gets $ (IM.! uid') . byUid . clients
             doLogic client line

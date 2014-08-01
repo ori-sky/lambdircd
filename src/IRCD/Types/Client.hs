@@ -15,8 +15,11 @@
 
 module IRCD.Types.Client where
 
+import System.IO (Handle)
+
 data Client = Client
     { uid           :: Maybe Int
+    , handle        :: Maybe Handle
     , nick          :: Maybe String
     , user          :: Maybe String
     , realName      :: Maybe String
@@ -27,6 +30,7 @@ data Client = Client
 defaultClient :: Client
 defaultClient = Client
     { uid           = Nothing
+    , handle        = Nothing
     , nick          = Nothing
     , user          = Nothing
     , realName      = Nothing
