@@ -13,17 +13,10 @@
  - limitations under the License.
  -}
 
-module NoExternal (plugin) where
+module IRCD.Plugin (registerCMode) where
 
-import IRCD.Types.Plugin
-import IRCD.Types.Server
-import IRCD.Plugin
+import Control.Monad.State
+import IRCD.Types.Server (Env)
 
-plugin :: Plugin
-plugin = defaultPlugin {startup=registerCMode 'n', transformers=[Transformer noExt 50]}
-
-noExt :: TransformerSpec
-noExt action@(PrivmsgAction (ClientSrc client) (ChannelDst channel) msg io)
-    | 'n' `elem` modes channel && channel `notElem` channels client = return []
-    | otherwise = return [action]
-noExt action = return [action]
+registerCMode :: Char -> StateT Env IO ()
+registerCMode = undefined
