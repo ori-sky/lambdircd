@@ -19,7 +19,7 @@ import IRCD.Server
 import IRCD.Plugin.Load
 
 main :: IO ()
-main = loadPlugins ["Ping", "NoExternal"] >>= serveIRC
+main = loadPlugins ["Ping"{-, "NoExternal"-}] >>= serveIRC
 
 loadPlugins :: [String] -> IO [Plugin]
 loadPlugins names = do

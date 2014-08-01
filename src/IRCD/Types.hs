@@ -89,6 +89,12 @@ data Handler = GenericHandler HandlerSpec
 type TransformerSpec = Action -> State Env [Action]
 data Transformer = Transformer TransformerSpec Int
 
+instance Eq Transformer where
+    Transformer _ x == Transformer _ y = x == y
+
+instance Ord Transformer where
+    Transformer _ x `compare` Transformer _ y = x `compare` y
+
 type ActionSpec = StateT Env IO ()
 data Action = GenericAction ActionSpec
             | PrivmsgAction Source Destination Message ActionSpec
@@ -113,7 +119,9 @@ defaultClients = Clients
 
 defaultEnv :: Env
 defaultEnv = Env
-    { envClients = defaultClients
+    { envClients        = defaultClients
+    , envHandlers       = []
+    , envTransformers   = []
     }
 
 defaultPlugin :: Plugin

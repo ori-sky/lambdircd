@@ -17,6 +17,7 @@
 
 module IRCD.Server (serveIRC) where
 
+import Data.List (sort)
 import qualified Data.IntMap as IM ((!))
 import Control.Monad.State
 import Control.Concurrent (forkIO)
@@ -26,7 +27,7 @@ import System.IO
 import System.IO.Error (tryIOError)
 import IRCD.Types
 import IRCD.Clients (firstAvailableID, insertClient, deleteClientByUid)
-import IRCD.Env (mapEnvClients)
+import IRCD.Env
 import IRCD.Logic (doLogic)
 
 data Notification = Accept Handle
@@ -71,7 +72,8 @@ inputLoop chan sock handle' uid' = do
 main :: [Plugin] -> Chan Notification -> Socket -> StateT Env IO ()
 main plugins chan sock = do
     mapM_ startup plugins
-    -- TODO: load handlers and transformers into Env
+    modify $ mapEnvHandlers (++ concatMap handlers plugins)
+    modify $ mapEnvTransformers (++ sort (concatMap transformers plugins))
     mainLoop chan sock
 
 mainLoop :: Chan Notification -> Socket -> StateT Env IO ()

@@ -13,15 +13,15 @@
  - limitations under the License.
  -}
 
-module IRCD.Env (mapEnvClients) where
+module IRCD.Env where
 
 import IRCD.Types
 
 mapEnvClients :: (Clients -> Clients) -> Env -> Env
 mapEnvClients f env = env {envClients = f (envClients env)}
 
-mapHandlers :: ([Handler] -> [Handler]) -> Env -> Env
-mapHandlers f env = env {envHandlers = f (envHandlers env)}
+mapEnvHandlers :: ([Handler] -> [Handler]) -> Env -> Env
+mapEnvHandlers f env = env {envHandlers = f (envHandlers env)}
 
-mapTransformers :: ([Transformer] -> [Transformer]) -> Env -> Env
-mapTransformers f env = env {envTransformers = f (envTransformers env)}
+mapEnvTransformers :: ([Transformer] -> [Transformer]) -> Env -> Env
+mapEnvTransformers f env = env {envTransformers = f (envTransformers env)}
