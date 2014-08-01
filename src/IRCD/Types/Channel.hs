@@ -13,14 +13,12 @@
  - limitations under the License.
  -}
 
-module IRCD.Types.Message where
+module IRCD.Types.Channel where
 
-import IRCD.Types.Prefix (Prefix)
 import IRCD.Types.Client (Client)
 
-data Message = Message
-    { tags      :: () -- TODO: support message tags
-    , prefix    :: Maybe Prefix
-    , command   :: String
-    , params    :: [String]
+data Channel = Channel
+    { name      :: String
+    , modes     :: [Char]
+    , clients   :: [Client]
     } deriving Show

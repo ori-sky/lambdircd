@@ -16,24 +16,27 @@
 module IRCD.Types.Client where
 
 import System.IO (Handle)
+import IRCD.Types.Channel (Channel)
 
 data Client = Client
     { uid           :: Maybe Int
     , handle        :: Maybe Handle
+    , registered    :: Bool
     , nick          :: Maybe String
     , user          :: Maybe String
     , realName      :: Maybe String
     , host          :: Maybe String
-    , registered    :: Bool
+    , channels      :: [Channel]
     } deriving (Show)
 
 defaultClient :: Client
 defaultClient = Client
     { uid           = Nothing
     , handle        = Nothing
+    , registered    = False
     , nick          = Nothing
     , user          = Nothing
     , realName      = Nothing
     , host          = Nothing
-    , registered    = False
+    , channels      = []
     }

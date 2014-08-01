@@ -19,8 +19,9 @@ import Control.Monad.State
 import IRCD.Types.Env (Env)
 import IRCD.Types.Action
 import IRCD.Types.Message (Message)
+import IRCD.Types.Source
 
-type HandlerSpec = Message -> State Env [Action]
+type HandlerSpec = Source -> Message -> State Env [Action]
 type TransformerSpec = Action -> State Env [Action]
 
 data Handler = GenericHandler HandlerSpec

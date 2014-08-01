@@ -13,14 +13,17 @@
  - limitations under the License.
  -}
 
-module IRCD.Types.Message where
+module NoExternal (plugin) where
 
-import IRCD.Types.Prefix (Prefix)
-import IRCD.Types.Client (Client)
+import IRCD.Types.Plugin
+import IRCD.Types.Action
+import IRCD.Types.Destination
 
-data Message = Message
-    { tags      :: () -- TODO: support message tags
-    , prefix    :: Maybe Prefix
-    , command   :: String
-    , params    :: [String]
-    } deriving Show
+plugin :: Plugin
+plugin = defaultPlugin {transformers=[Transformer noExt 50]}
+
+noExt :: TransformerSpec
+noExt action@(PrivmsgAction src (ChannelDst channel) msg io)
+    | 'n' `elem` modes channel && channel `notElem` channels client = return []
+    | otherwise = return [action]
+noExt action = return [action]
