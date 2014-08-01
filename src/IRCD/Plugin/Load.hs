@@ -13,15 +13,16 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
+{-# LANGUAGE LambdaCase #-}
+
+module IRCD.Plugin.Load where
+
+import System.Plugins.Load
 import IRCD.Types.Plugin
-import IRCD.Server
-import IRCD.Plugin.Load
 
-main :: IO ()
-main = loadPlugins ["Ping", "NoExternal"] >>= serveIRC
-
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+loadPlugin :: String -> IO (Maybe Plugin)
+loadPlugin name' = load_ ("plugins/" ++ name' ++ ".o") ["src"] "plugin" >>= \case
+    LoadSuccess _ plugin -> return $ Just $ case name plugin of
+        "" -> plugin {name=name'}
+        _  -> plugin
+    LoadFailure e -> mapM_ putStrLn e >> return Nothing

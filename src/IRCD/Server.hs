@@ -25,6 +25,7 @@ import Network.Socket
 import System.IO
 import System.IO.Error (tryIOError)
 import IRCD.Types.Server
+import IRCD.Types.Plugin
 import IRCD.Clients (firstAvailableID, insertClient, deleteClientByUid)
 import IRCD.Env (mapEnvClients)
 import IRCD.Logic (doLogic)
@@ -34,8 +35,8 @@ data Notification = Accept Handle
                   | Disconnect Int
                     deriving Show
 
-serveIRC :: IO ()
-serveIRC = do
+serveIRC :: [Plugin] -> IO ()
+serveIRC plugins = do
     sock <- socket AF_INET Stream defaultProtocol
     setSocketOption sock NoDelay 1
     setSocketOption sock ReuseAddr 1
