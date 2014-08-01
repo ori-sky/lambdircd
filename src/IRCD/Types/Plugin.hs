@@ -22,6 +22,7 @@ import IRCD.Types.Server hiding (name)
 data Plugin = Plugin
     { name          :: String
     , startup       :: StateT Env IO ()
+    , shutdown      :: StateT Env IO ()
     , handlers      :: [Handler]
     , transformers  :: [Transformer]
     }
