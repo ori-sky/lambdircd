@@ -10,12 +10,13 @@ build-plugins:
 build:
 	ghc $(FLAGS) $(CFLAGS) -isrc src/Main -o $(EXECUTABLE)
 
-rts:
-	ghc $(FLAGS) $(CFLAGS) -isrc src/Main -o $(EXECUTABLE) -rtsopts
+clean-all: clean-plugins clean
+
+clean-plugins:
+	rm -fv plugins/*.o plugins/*.hi
 
 clean:
 	rm -fv $(EXECUTABLE)
-	rm -fv plugins/*.o plugins/*.hi
 	find src -name '*.o' -print0 | xargs -0 rm -fv
 	find src -name '*.hi' -print0 | xargs -0 rm -fv
 
