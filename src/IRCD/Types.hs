@@ -99,6 +99,10 @@ type ActionSpec = StateT Env IO ()
 data Action = GenericAction ActionSpec
             | PrivmsgAction Source Destination Message ActionSpec
 
+actionSpec :: Action -> ActionSpec
+actionSpec (GenericAction spec) = spec
+actionSpec (PrivmsgAction _ _ _ spec) = spec
+
 defaultClient :: Client
 defaultClient = Client
     { uid           = Nothing

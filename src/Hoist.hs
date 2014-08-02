@@ -13,23 +13,9 @@
  - limitations under the License.
  -}
 
-module Ping (plugin) where
+module Hoist where
 
-import Control.Monad.State (liftIO)
-import IRCD.Types
+import Control.Monad.State
 
-plugin :: Plugin
-plugin = defaultPlugin
-    { handlers=[CommandHandler "PING" ping]
-    , transformers=[defaultTransformer trans]
-    }
-
-ping :: HandlerSpec
-ping src (Message tags prefix cmd (server1:_)) = return [GenericAction io]
-  where io = liftIO $ putStrLn "received PING"
-ping src _ = return [GenericAction io]
-  where io = liftIO $ putStrLn "not enough parameters for PING"
-
-trans :: TransformerSpec
-trans a = return [a, GenericAction io]
-  where io = liftIO (putStrLn "lol")
+hoistState :: Monad m => State s a -> StateT s m a
+hoistState = StateT . (return .) . runState

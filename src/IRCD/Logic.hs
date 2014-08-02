@@ -15,18 +15,21 @@
 
 module IRCD.Logic (doLogic) where
 
-import qualified Data.IntMap as IM (toList)
 import Control.Monad.State
-import System.IO (hPutStrLn)
-import qualified IRCD.TS6 as TS6
+import Hoist
 import IRCD.Types
 import IRCD.Message
 
 doLogic :: Client -> String -> StateT Env IO ()
 doLogic client line = do
-    handles' <- gets (byUid . envClients) >>= return . map (handle . snd) . IM.toList
-    liftIO (mapM_ f handles')
-    liftIO $ print (parseMessage line)
-  where f Nothing = return ()
-        f (Just handle') = hPutStrLn handle' $ "[::" ++ uidString ++ "] " ++ line
-        uidString = maybe "*" TS6.intToID (uid client)
+    actions <- gets envHandlers >>= hoistState . mapM fh >>= return . concat
+    ts <- gets envTransformers
+    hoistState (ft ts actions) >>= mapM_ actionSpec
+  where msg = parseMessage line
+        fh (GenericHandler spec) = spec (ClientSrc client) msg
+        fh (CommandHandler cmd spec)
+            | cmd == command msg = spec (ClientSrc client) msg
+            | otherwise = return []
+        ft [] _ = return []
+        ft (Transformer spec _ : []) actions = mapM spec actions >>= return . concat
+        ft (Transformer spec _ : xs) actions = mapM spec actions >>= return . concat >>= ft xs
