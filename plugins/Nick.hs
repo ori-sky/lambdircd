@@ -13,15 +13,17 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
+module Nick (plugin) where
+
+import Control.Monad.State
 import IRCD.Types
-import IRCD.Server
-import IRCD.Plugin.Load
 
-main :: IO ()
-main = loadPlugins ["Ping", "Nick"{-, "NoExternal"-}] >>= serveIRC
+plugin :: Plugin
+plugin = defaultPlugin {handlers=[CommandHandler "NICK" nickHandler]}
 
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+nickHandler :: HandlerSpec
+nickHandler (ClientSrc client) (Message _ _ _ (nick:_)) = do
+    nicks <- gets (byNick . envClients)
+    return [GenericAction (liftIO $ print nicks)]
+nickHandler (ClientSrc client) _ = return [GenericAction io]
+  where io = liftIO (putStrLn "No nickname given")

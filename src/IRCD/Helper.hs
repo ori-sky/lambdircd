@@ -13,15 +13,13 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
+module IRCD.Helper where
+
+import Control.Monad.State
 import IRCD.Types
-import IRCD.Server
-import IRCD.Plugin.Load
 
-main :: IO ()
-main = loadPlugins ["Ping", "Nick"{-, "NoExternal"-}] >>= serveIRC
+updateClient :: Client -> Client -> State Env ()
+updateClient old new = undefined
 
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+mapClient :: (Client -> Client) -> Client -> State Env ()
+mapClient f x = updateClient x (f x)

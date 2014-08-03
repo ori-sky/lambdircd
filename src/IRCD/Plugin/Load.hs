@@ -17,12 +17,23 @@
 
 module IRCD.Plugin.Load where
 
-import System.Plugins.Load
+import GHC
+import GHC.Paths (libdir)
+import DynFlags
+import Unsafe.Coerce
 import IRCD.Types
 
 loadPlugin :: String -> IO (Maybe Plugin)
-loadPlugin name' = load_ ("plugins/" ++ name' ++ ".o") ["src"] "plugin" >>= \case
-    LoadSuccess _ plugin -> return $ Just $ case pluginName plugin of
-        "" -> plugin {pluginName=name'}
-        _  -> plugin
-    LoadFailure e -> mapM_ putStrLn e >> return Nothing
+loadPlugin name' = do
+    defaultErrorHandler defaultFatalMessager defaultFlushOut $ do
+        runGhc (Just libdir) $ do
+            dflags <- getSessionDynFlags
+            setSessionDynFlags dflags {importPaths="plugins":"src":includePaths dflags}
+            target <- guessTarget name' Nothing
+            setTargets [target]
+            load LoadAllTargets >>= \case
+                Failed -> return Nothing
+                Succeeded -> do
+                    setContext [IIDecl $ simpleImportDecl (mkModuleName name')]
+                    result <- compileExpr "plugin"
+                    return $ Just (unsafeCoerce result :: Plugin)

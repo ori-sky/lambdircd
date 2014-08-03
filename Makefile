@@ -8,7 +8,7 @@ build-plugins:
 	ghc $(FLAGS) $(CFLAGS) -isrc plugins/*.hs
 
 build:
-	ghc $(FLAGS) $(CFLAGS) -isrc src/Main -o $(EXECUTABLE)
+	ghc $(FLAGS) $(CFLAGS) -package ghc -package ghc-paths -isrc src/Main -o $(EXECUTABLE)
 
 clean-all: clean-plugins clean
 
