@@ -15,15 +15,21 @@
 
 module Nick (plugin) where
 
+import qualified Data.Map as M
 import Control.Monad.State
 import IRCD.Types
+import IRCD.Env
+import IRCD.Clients
 
 plugin :: Plugin
 plugin = defaultPlugin {handlers=[CommandHandler "NICK" nickHandler]}
 
 nickHandler :: HandlerSpec
-nickHandler (ClientSrc client) (Message _ _ _ (nick:_)) = do
+nickHandler (ClientSrc client) (Message _ _ _ (nick':_)) = do
     nicks <- gets (byNick . envClients)
-    return [GenericAction (liftIO $ print nicks)]
-nickHandler (ClientSrc client) _ = return [GenericAction io]
-  where io = liftIO (putStrLn "No nickname given")
+    if nick' `M.member` nicks
+        then return [GenericAction $ liftIO (putStrLn "Nickname is already in use")]
+        else do
+            modify $ mapEnvClients (replaceClient client client {nick=Just nick'})
+            return [GenericAction $ liftIO (putStrLn ("NICK " ++ nick'))]
+nickHandler (ClientSrc client) _ = return [GenericAction $ liftIO (putStrLn "No nickname given")]

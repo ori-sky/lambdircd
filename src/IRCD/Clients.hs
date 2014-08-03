@@ -13,9 +13,7 @@
  - limitations under the License.
  -}
 
-module IRCD.Clients
-(firstAvailableID, insertClient, deleteClient, deleteClientByUid)
-where
+module IRCD.Clients where
 
 import Data.List (sort)
 import qualified Data.Map as M (insert, delete)
@@ -55,6 +53,9 @@ deleteClient client clients = clients
     byNick' = case nick client of
         Nothing    -> byNick clients
         Just nick' -> M.delete nick' (byNick clients)
+
+replaceClient :: Client -> Client -> Clients -> Clients
+replaceClient old new = insertClient new . deleteClient old
 
 deleteClientByUid :: Int -> Clients -> Clients
 deleteClientByUid uid' clients = clients {byUid = IM.delete uid' (byUid clients)}
