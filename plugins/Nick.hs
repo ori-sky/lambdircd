@@ -15,6 +15,8 @@
 
 module Nick (plugin) where
 
+import Data.Maybe (fromMaybe)
+import Data.Char (toUpper)
 import qualified Data.Map as M
 import Control.Monad.State
 import IRCD.Types
@@ -27,9 +29,11 @@ plugin = defaultPlugin {handlers=[CommandHandler "NICK" nickHandler]}
 nickHandler :: HandlerSpec
 nickHandler (ClientSrc client) (Message _ _ _ (nick':_)) = do
     nicks <- gets (byNick . envClients)
-    if nick' `M.member` nicks
-        then return [GenericAction $ liftIO (putStrLn "Nickname is already in use")]
-        else do
+    if upperNick `M.notMember` nicks || (upperNick == map toUpper clientNick && nick' /= clientNick)
+        then do
             modify $ mapEnvClients (replaceClient client client {nick=Just nick'})
             return [GenericAction $ liftIO (putStrLn ("NICK " ++ nick'))]
+        else return [GenericAction $ liftIO (putStrLn "Nickname is already in use")]
+  where upperNick = map toUpper nick'
+        clientNick = fromMaybe "" (nick client)
 nickHandler (ClientSrc client) _ = return [GenericAction $ liftIO (putStrLn "No nickname given")]
