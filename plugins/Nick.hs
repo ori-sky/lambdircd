@@ -22,18 +22,19 @@ import Control.Monad.State
 import IRCD.Types
 import IRCD.Env
 import IRCD.Clients
+import IRCD.Helper
 
 plugin :: Plugin
 plugin = defaultPlugin {handlers=[CommandHandler "NICK" nickHandler]}
 
 nickHandler :: HandlerSpec
-nickHandler (ClientSrc client) (Message _ _ _ (nick':_)) = do
+nickHandler src@(ClientSrc client) (Message _ _ _ (nick':_)) = do
     nicks <- gets (byNick . envClients)
     if upperNick `M.notMember` nicks || (upperNick == map toUpper clientNick && nick' /= clientNick)
         then do
             modify $ mapEnvClients (replaceClient client client {nick=Just nick'})
-            return [GenericAction $ liftIO (putStrLn ("NICK " ++ nick'))]
-        else return [GenericAction $ liftIO (putStrLn "Nickname is already in use")]
+            return [GenericAction $ reply_ src ("NICK " ++ nick')]
+        else return [GenericAction $ reply_ src "Nickname is already in use"]
   where upperNick = map toUpper nick'
         clientNick = fromMaybe "" (nick client)
-nickHandler (ClientSrc client) _ = return [GenericAction $ liftIO (putStrLn "No nickname given")]
+nickHandler src@(ClientSrc client) _ = return [GenericAction $ reply_ src "No nickname given"]

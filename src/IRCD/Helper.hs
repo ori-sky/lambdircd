@@ -16,6 +16,7 @@
 module IRCD.Helper where
 
 import Control.Monad.State
+import System.IO (hPutStrLn)
 import IRCD.Types
 
 updateClient :: Client -> Client -> State Env ()
@@ -23,3 +24,8 @@ updateClient old new = undefined
 
 mapClient :: (Client -> Client) -> Client -> State Env ()
 mapClient f x = updateClient x (f x)
+
+reply_ :: Source -> String -> StateT Env IO ()
+reply_ (ClientSrc client) msg = case handle client of
+    Nothing -> return ()
+    Just h -> liftIO (hPutStrLn h msg)
