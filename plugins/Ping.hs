@@ -19,17 +19,10 @@ import Control.Monad.State (liftIO)
 import IRCD.Types
 
 plugin :: Plugin
-plugin = defaultPlugin
-    { handlers=[CommandHandler "PING" ping]
-    , transformers=[defaultTransformer trans]
-    }
+plugin = defaultPlugin {handlers=[CommandHandler "PING" ping]}
 
 ping :: HandlerSpec
 ping src (Message tags prefix cmd (server1:_)) = return [GenericAction io]
   where io = liftIO $ putStrLn "received PING"
 ping src _ = return [GenericAction io]
   where io = liftIO $ putStrLn "not enough parameters for PING"
-
-trans :: TransformerSpec
-trans a = return [a, GenericAction io]
-  where io = liftIO (putStrLn "lol")
