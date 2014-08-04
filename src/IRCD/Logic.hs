@@ -30,6 +30,6 @@ doLogic client line = do
         fh (CommandHandler cmd spec)
             | cmd == command msg = spec (ClientSrc client) msg
             | otherwise = return []
-        ft [] _ = return []
+        ft [] actions = return actions
         ft (Transformer spec _ : []) actions = mapM spec actions >>= return . concat
         ft (Transformer spec _ : xs) actions = mapM spec actions >>= return . concat >>= ft xs

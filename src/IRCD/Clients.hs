@@ -16,8 +16,9 @@
 module IRCD.Clients where
 
 import Data.List (sort)
+import Data.Char (toUpper)
 import qualified Data.Map as M (insert, delete)
-import qualified Data.IntMap as IM (keys, insert, delete)
+import qualified Data.IntMap as IM
 import IRCD.Types
 
 firstAvailableID :: Clients -> Int
@@ -39,7 +40,7 @@ insertClient client clients = clients
         Just uid' -> IM.insert uid' client (byUid clients)
     byNick' = case nick client of
         Nothing    -> byNick clients
-        Just nick' -> M.insert nick' client (byNick clients)
+        Just nick' -> M.insert (map toUpper nick') client (byNick clients)
 
 deleteClient :: Client -> Clients -> Clients
 deleteClient client clients = clients
@@ -52,10 +53,12 @@ deleteClient client clients = clients
         Just uid' -> IM.delete uid' (byUid clients)
     byNick' = case nick client of
         Nothing    -> byNick clients
-        Just nick' -> M.delete nick' (byNick clients)
+        Just nick' -> M.delete (map toUpper nick') (byNick clients)
 
 replaceClient :: Client -> Client -> Clients -> Clients
 replaceClient old new = insertClient new . deleteClient old
 
 deleteClientByUid :: Int -> Clients -> Clients
-deleteClientByUid uid' clients = clients {byUid = IM.delete uid' (byUid clients)}
+deleteClientByUid uid' clients = case uid' `IM.lookup` byUid clients of
+    Nothing -> clients
+    Just cli -> deleteClient cli clients
