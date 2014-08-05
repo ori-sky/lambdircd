@@ -38,5 +38,5 @@ nickHandler src@(ClientSrc client) (Message _ _ _ (nick':_)) = do
         clientNick = fromMaybe "" (nick client)
         ioChange = do
             hoistState $ modify $ mapEnvClients (replaceClient client client {nick=Just nick'})
-            reply_ src ("NICK " ++ nick')
+            when (registered client) $ reply_ src ("NICK " ++ nick')
 nickHandler src@(ClientSrc client) _ = return [GenericAction $ reply_ src "No nickname given"]
