@@ -15,10 +15,7 @@
 
 module User (plugin) where
 
-import Control.Monad.State
 import IRCD.Types
-import IRCD.Env
-import IRCD.Clients
 import IRCD.Helper
 import Hoist
 
@@ -31,6 +28,6 @@ userHandler src@(ClientSrc client) (Message _ _ _ (user':_:_:realname:_))
     | otherwise = return [ UserChangeAction src (user client) user' ioUser
                          , RealNameChangeAction src (realName client) realname ioRealName
                          ]
-  where ioUser = hoistState $ modify $ mapEnvClients (replaceClient client client {user=Just user'})
-        ioRealName = hoistState $ modify $ mapEnvClients (replaceClient client client {realName=Just realname})
+  where ioUser = hoistState $ updateClientUser user' (uid client)
+        ioRealName = hoistState $ updateClientRealName realname (uid client)
 userHandler src _ = return [GenericAction $ reply_ src "Not enough parameters"]

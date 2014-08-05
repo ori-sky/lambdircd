@@ -15,15 +15,31 @@
 
 module IRCD.Helper where
 
+import qualified Data.IntMap as IM
 import Control.Monad.State
 import System.IO (hPutStrLn)
 import IRCD.Types
+import IRCD.Env
+import IRCD.Clients
 
-updateClient :: Client -> Client -> State Env ()
-updateClient old new = undefined
+updateClient :: (Client -> Client) -> Int -> State Env ()
+updateClient f uid' = do
+    uids <- gets (byUid . envClients)
+    modify $ mapEnvClients $ case uid' `IM.lookup` uids of
+        Nothing -> insertClient (f (defaultClient uid'))
+        Just client'  -> replaceClient client' (f client')
 
-mapClient :: (Client -> Client) -> Client -> State Env ()
-mapClient f x = updateClient x (f x)
+updateClientNick :: String -> Int -> State Env ()
+updateClientNick nick' = updateClient (\c -> c {nick=Just nick'})
+
+updateClientUser :: String -> Int -> State Env ()
+updateClientUser user' = updateClient (\c -> c {user=Just user'})
+
+updateClientRealName :: String -> Int -> State Env ()
+updateClientRealName realname = updateClient (\c -> c {realName=Just realname})
+
+updateClientRegistered :: Bool -> Int -> State Env ()
+updateClientRegistered r = updateClient (\c -> c {registered=r})
 
 reply_ :: Source -> String -> StateT Env IO ()
 reply_ (ClientSrc client) msg = case handle client of
