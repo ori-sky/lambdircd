@@ -32,11 +32,11 @@ nickHandler :: HandlerSpec
 nickHandler src@(ClientSrc client) (Message _ _ _ (nick':_)) = do
     nicks <- gets (byNick . envClients)
     if upperNick `M.notMember` nicks || (upperNick == map toUpper clientNick && nick' /= clientNick)
-        then return [NickChangeAction src clientNick nick' ioChange]
+        then return [NickChangeAction src (nick client) nick' ioChange]
         else return [GenericAction $ reply_ src "Nickname is already in use"]
   where upperNick = map toUpper nick'
         clientNick = fromMaybe "" (nick client)
         ioChange = do
             hoistState $ modify $ mapEnvClients (replaceClient client client {nick=Just nick'})
             when (registered client) $ reply_ src ("NICK " ++ nick')
-nickHandler src@(ClientSrc client) _ = return [GenericAction $ reply_ src "No nickname given"]
+nickHandler src _ = return [GenericAction $ reply_ src "No nickname given"]
