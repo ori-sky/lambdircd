@@ -34,26 +34,20 @@ insertClient client clients = clients
     { byUid  = byUid'
     , byNick = byNick'
     }
-  where
-    byUid' = case uid client of
-        Nothing   -> byUid clients
-        Just uid' -> IM.insert uid' client (byUid clients)
-    byNick' = case nick client of
-        Nothing    -> byNick clients
-        Just nick' -> M.insert (map toUpper nick') client (byNick clients)
+  where byUid' = IM.insert (uid client) client (byUid clients)
+        byNick' = case nick client of
+            Nothing    -> byNick clients
+            Just nick' -> M.insert (map toUpper nick') client (byNick clients)
 
 deleteClient :: Client -> Clients -> Clients
 deleteClient client clients = clients
     { byUid  = byUid'
     , byNick = byNick'
     }
-  where
-    byUid' = case uid client of
-        Nothing   -> byUid clients
-        Just uid' -> IM.delete uid' (byUid clients)
-    byNick' = case nick client of
-        Nothing    -> byNick clients
-        Just nick' -> M.delete (map toUpper nick') (byNick clients)
+  where byUid' = IM.delete (uid client) (byUid clients)
+        byNick' = case nick client of
+            Nothing    -> byNick clients
+            Just nick' -> M.delete (map toUpper nick') (byNick clients)
 
 replaceClient :: Client -> Client -> Clients -> Clients
 replaceClient old new = insertClient new . deleteClient old

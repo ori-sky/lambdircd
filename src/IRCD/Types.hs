@@ -44,7 +44,7 @@ data Hostmask = Hostmask
 instance Show Hostmask where show (Hostmask n u h) = n ++ '!' : u ++ '@' : h
 
 data Client = Client
-    { uid           :: Maybe Int
+    { uid           :: Int
     , handle        :: Maybe Handle
     , registered    :: Bool
     , nick          :: Maybe String
@@ -109,9 +109,9 @@ actionSpec (NickChangeAction _ _ _ spec) = spec
 actionSpec (UserChangeAction _ _ _ spec) = spec
 actionSpec (RealNameChangeAction _ _ _ spec) = spec
 
-defaultClient :: Client
-defaultClient = Client
-    { uid           = Nothing
+defaultClient :: Int -> Client
+defaultClient uid' = Client
+    { uid           = uid'
     , handle        = Nothing
     , registered    = False
     , nick          = Nothing

@@ -82,8 +82,7 @@ mainLoop chan sock = do
     case note of
         Accept handle' -> do
             uid' <- gets envClients >>= return . firstAvailableID
-            modify $ mapEnvClients $ insertClient defaultClient
-                {uid=Just uid', handle=Just handle'}
+            modify $ mapEnvClients $ insertClient (defaultClient uid') {handle=Just handle'}
             void $ liftIO $ forkIO (inputLoop chan sock handle' uid')
         Recv uid' line -> do
             client <- gets $ (IM.! uid') . byUid . envClients
