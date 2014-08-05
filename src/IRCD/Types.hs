@@ -98,10 +98,12 @@ instance Ord Transformer where
 type ActionSpec = StateT Env IO ()
 data Action = GenericAction ActionSpec
             | PrivmsgAction Source Destination Message ActionSpec
+            | NickChangeAction Source String String ActionSpec
 
 actionSpec :: Action -> ActionSpec
 actionSpec (GenericAction spec) = spec
 actionSpec (PrivmsgAction _ _ _ spec) = spec
+actionSpec (NickChangeAction _ _ _ spec) = spec
 
 defaultClient :: Client
 defaultClient = Client
