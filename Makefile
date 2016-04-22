@@ -1,21 +1,23 @@
 EXECUTABLE=lambdircd
-FLAGS=-W -O2 -threaded
+FLAGS=-W -O2
 CFLAGS=
 
 all: build-plugins build
 
 build-plugins:
-	ghc $(FLAGS) $(CFLAGS) -isrc plugins/*.hs
+	find plugins -name '*.hs' -print0 | xargs -0 ghc $(FLAGS) $(CFLAGS) -isrc
 
 build:
-	ghc $(FLAGS) $(CFLAGS) -isrc src/Main -o $(EXECUTABLE)
+	ghc $(FLAGS) $(CFLAGS) -package ghc -package ghc-paths -isrc src/Main -o $(EXECUTABLE)
 
-rts:
-	ghc $(FLAGS) $(CFLAGS) -isrc src/Main -o $(EXECUTABLE) -rtsopts
+clean-all: clean-plugins clean
+
+clean-plugins:
+	find plugins -name '*.o' -print0 | xargs -0 rm -fv
+	find plugins -name '*.hi' -print0 | xargs -0 rm -fv
 
 clean:
 	rm -fv $(EXECUTABLE)
-	rm -fv plugins/*.o plugins/*.hi
 	find src -name '*.o' -print0 | xargs -0 rm -fv
 	find src -name '*.hi' -print0 | xargs -0 rm -fv
 

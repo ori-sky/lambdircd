@@ -13,23 +13,16 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
+module Core.NoExternal (plugin) where
+
 import IRCD.Types
-import IRCD.Server
-import IRCD.Plugin.Load
+import IRCD.Plugin
 
-main :: IO ()
-main = loadPlugins plugins >>= serveIRC
+plugin :: Plugin
+plugin = defaultPlugin {startup=registerCMode 'n', transformers=[Transformer noExt 50]}
 
-plugins :: [String]
-plugins = [ "Core.Ping"
-          , "Core.Nick"
-          , "Core.User"
-          , "Core.Register"
-          , "Core.Welcome"
-          ]
-
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+noExt :: TransformerSpec
+noExt action@(PrivmsgAction (ClientSrc client) (ChannelDst channel) msg io)
+    | 'n' `elem` modes channel && channel `notElem` channels client = return (False, [])
+    | otherwise = return (True, [])
+noExt _ = return (True, [])

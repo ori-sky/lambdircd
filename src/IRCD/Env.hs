@@ -13,23 +13,15 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
+module IRCD.Env where
+
 import IRCD.Types
-import IRCD.Server
-import IRCD.Plugin.Load
 
-main :: IO ()
-main = loadPlugins plugins >>= serveIRC
+mapEnvClients :: (Clients -> Clients) -> Env -> Env
+mapEnvClients f env = env {envClients = f (envClients env)}
 
-plugins :: [String]
-plugins = [ "Core.Ping"
-          , "Core.Nick"
-          , "Core.User"
-          , "Core.Register"
-          , "Core.Welcome"
-          ]
+mapEnvHandlers :: ([Handler] -> [Handler]) -> Env -> Env
+mapEnvHandlers f env = env {envHandlers = f (envHandlers env)}
 
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+mapEnvTransformers :: ([Transformer] -> [Transformer]) -> Env -> Env
+mapEnvTransformers f env = env {envTransformers = f (envTransformers env)}

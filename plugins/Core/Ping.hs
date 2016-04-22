@@ -13,23 +13,16 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
+module Core.Ping (plugin) where
+
+import Control.Monad.State (liftIO)
 import IRCD.Types
-import IRCD.Server
-import IRCD.Plugin.Load
 
-main :: IO ()
-main = loadPlugins plugins >>= serveIRC
+plugin :: Plugin
+plugin = defaultPlugin {handlers=[CommandHandler "PING" ping]}
 
-plugins :: [String]
-plugins = [ "Core.Ping"
-          , "Core.Nick"
-          , "Core.User"
-          , "Core.Register"
-          , "Core.Welcome"
-          ]
-
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+ping :: HandlerSpec
+ping src (Message tags prefix cmd (server1:_)) = return [GenericAction io]
+  where io = liftIO $ putStrLn "received PING"
+ping src _ = return [GenericAction io]
+  where io = liftIO $ putStrLn "not enough parameters for PING"

@@ -13,23 +13,9 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
-import IRCD.Types
-import IRCD.Server
-import IRCD.Plugin.Load
+module Hoist where
 
-main :: IO ()
-main = loadPlugins plugins >>= serveIRC
+import Control.Monad.State
 
-plugins :: [String]
-plugins = [ "Core.Ping"
-          , "Core.Nick"
-          , "Core.User"
-          , "Core.Register"
-          , "Core.Welcome"
-          ]
-
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+hoistState :: Monad m => State s a -> StateT s m a
+hoistState = StateT . (return .) . runState

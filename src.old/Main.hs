@@ -13,23 +13,11 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
-import IRCD.Types
-import IRCD.Server
-import IRCD.Plugin.Load
+import IRC.Server as IRCD
+import IRC.Server.Environment
+import Config
 
 main :: IO ()
-main = loadPlugins plugins >>= serveIRC
-
-plugins :: [String]
-plugins = [ "Core.Ping"
-          , "Core.Nick"
-          , "Core.User"
-          , "Core.Register"
-          , "Core.Welcome"
-          ]
-
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+main = do
+    cp <- loadConfig "ircd.conf"
+    serveIRC defaultEnv {config=cp}

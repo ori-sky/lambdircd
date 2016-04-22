@@ -13,23 +13,10 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
+module IRCD.Plugin (registerCMode) where
+
+import Control.Monad.State
 import IRCD.Types
-import IRCD.Server
-import IRCD.Plugin.Load
 
-main :: IO ()
-main = loadPlugins plugins >>= serveIRC
-
-plugins :: [String]
-plugins = [ "Core.Ping"
-          , "Core.Nick"
-          , "Core.User"
-          , "Core.Register"
-          , "Core.Welcome"
-          ]
-
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+registerCMode :: Char -> StateT Env IO ()
+registerCMode = undefined

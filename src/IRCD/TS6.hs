@@ -13,23 +13,14 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
-import IRCD.Types
-import IRCD.Server
-import IRCD.Plugin.Load
+module IRCD.TS6 (intToID) where
 
-main :: IO ()
-main = loadPlugins plugins >>= serveIRC
+import Numeric (showIntAtBase)
+import Data.Char (intToDigit)
+import Text.Printf (printf)
 
-plugins :: [String]
-plugins = [ "Core.Ping"
-          , "Core.Nick"
-          , "Core.User"
-          , "Core.Register"
-          , "Core.Welcome"
-          ]
-
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+intToID :: Int -> String
+intToID x = 'A' : printf "%05s" (showIntAtBase 36 toChr x "")
+  where toChr c
+            | 0 <= c && c <= 9 = intToDigit c
+            | otherwise = toEnum (c + (65 - 10))
