@@ -13,7 +13,7 @@
  - limitations under the License.
  -}
 
-module Nick (plugin) where
+module Core.Nick (plugin) where
 
 import Data.Maybe (fromMaybe)
 import Data.Char (toUpper)

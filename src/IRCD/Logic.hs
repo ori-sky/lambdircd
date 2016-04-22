@@ -13,6 +13,8 @@
  - limitations under the License.
  -}
 
+{-# LANGUAGE LambdaCase #-}
+
 module IRCD.Logic (doLogic) where
 
 import Control.Monad.State
@@ -24,12 +26,28 @@ doLogic :: Client -> String -> StateT Env IO ()
 doLogic client line = do
     actions <- gets envHandlers >>= hoistState . mapM fh >>= return . concat
     ts <- gets envTransformers
-    hoistState (ft ts actions) >>= mapM_ actionSpec
+    actions' <- mapM (ft ts ts) actions >>= return . concat
+    liftIO (print actions')
+    --mapM_ actionSpec as
+    --hoistState (mapM (ft ts ts) actions) >>= mapM_ actionSpec . concat
   where msg = parseMessage line
         fh (GenericHandler spec) = spec (ClientSrc client) msg
         fh (CommandHandler cmd spec)
             | cmd == command msg = spec (ClientSrc client) msg
             | otherwise = return []
-        ft [] actions = return actions
-        ft (Transformer spec _ : []) actions = mapM spec actions >>= return . concat
-        ft (Transformer spec _ : xs) actions = mapM spec actions >>= return . concat >>= ft xs
+
+        ft ts [] action = return [action]
+        ft ts (Transformer spec _ : xs) action = hoistState (spec action) >>= \case
+            (False, actions) -> mapM (ft ts ts) actions >>= return . concat
+            (True, actions)  -> do
+                this <- ft ts xs action 
+                mapM_ actionSpec this
+                rest <- mapM (ft ts ts) actions >>= return . concat
+                return (concat [this, rest])
+
+doLogic :: Client -> String -> StateT Env IO ()
+doLogic client line = do
+    actions <- gets envHandlers >>= hoistState . mapM fh >>= return . concat
+    ts <- gets envTransformers
+    map (transformAction ts) actions
+  where transformAction (Transformer spec _ : ts) action = hoistState (spec action)\

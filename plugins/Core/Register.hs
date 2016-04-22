@@ -13,7 +13,7 @@
  - limitations under the License.
  -}
 
-module Register (plugin) where
+module Core.Register (plugin) where
 
 import Data.Maybe (isJust)
 import IRCD.Types
@@ -24,19 +24,19 @@ plugin :: Plugin
 plugin = defaultPlugin {transformers=[Transformer register 200]}
 
 register :: TransformerSpec
-register action@(NickChangeAction (ClientSrc client) _ new _)
-    | canRegister client {nick=Just new} = return [action, GenericAction io]
-    | otherwise = return [action]
+register action@(NickChangeAction src@(ClientSrc client) _ new _)
+    | canRegister client {nick=Just new} = return (True, [RegisterAction src io])
+    | otherwise = return (True, [])
   where io = hoistState $ updateClientRegistered True (uid client)
-register action@(UserChangeAction (ClientSrc client) _ new _)
-    | canRegister client {user=Just new} = return [action, GenericAction io]
-    | otherwise = return [action]
+register action@(UserChangeAction src@(ClientSrc client) _ new _)
+    | canRegister client {user=Just new} = return (True, [RegisterAction src io])
+    | otherwise = return (True, [])
   where io = hoistState $ updateClientRegistered True (uid client)
-register action@(RealNameChangeAction (ClientSrc client) _ new _)
-    | canRegister client {realName=Just new} = return [action, GenericAction io]
-    | otherwise = return [action]
+register action@(RealNameChangeAction src@(ClientSrc client) _ new _)
+    | canRegister client {realName=Just new} = return (True, [RegisterAction src io])
+    | otherwise = return (True, [])
   where io = hoistState $ updateClientRegistered True (uid client)
-register action = return [action]
+register _ = return (True, [])
 
 canRegister :: Client -> Bool
 canRegister client

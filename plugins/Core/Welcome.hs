@@ -13,23 +13,15 @@
  - limitations under the License.
  -}
 
-import Data.Maybe (catMaybes)
+module Core.Welcome (plugin) where
+
 import IRCD.Types
-import IRCD.Server
-import IRCD.Plugin.Load
+import IRCD.Helper
 
-main :: IO ()
-main = loadPlugins plugins >>= serveIRC
+plugin :: Plugin
+plugin = defaultPlugin {transformers=[Transformer welcome 80]}
 
-plugins :: [String]
-plugins = [ "Core.Ping"
-          , "Core.Nick"
-          , "Core.User"
-          , "Core.Register"
-          , "Core.Welcome"
-          ]
-
-loadPlugins :: [String] -> IO [Plugin]
-loadPlugins names = do
-    pluginMaybes <- mapM (\name -> putStrLn ("Loading plugin `" ++ name ++ "`") >> loadPlugin name) names
-    return (catMaybes pluginMaybes)
+welcome :: TransformerSpec
+welcome action@(RegisterAction src@(ClientSrc client) _) = return (True, [GenericAction io])
+  where io = reply_ src "Welcome!"
+welcome _ = return (True, [])

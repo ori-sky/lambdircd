@@ -13,16 +13,16 @@
  - limitations under the License.
  -}
 
-module Ping (plugin) where
+module Core.NoExternal (plugin) where
 
-import Control.Monad.State (liftIO)
 import IRCD.Types
+import IRCD.Plugin
 
 plugin :: Plugin
-plugin = defaultPlugin {handlers=[CommandHandler "PING" ping]}
+plugin = defaultPlugin {startup=registerCMode 'n', transformers=[Transformer noExt 50]}
 
-ping :: HandlerSpec
-ping src (Message tags prefix cmd (server1:_)) = return [GenericAction io]
-  where io = liftIO $ putStrLn "received PING"
-ping src _ = return [GenericAction io]
-  where io = liftIO $ putStrLn "not enough parameters for PING"
+noExt :: TransformerSpec
+noExt action@(PrivmsgAction (ClientSrc client) (ChannelDst channel) msg io)
+    | 'n' `elem` modes channel && channel `notElem` channels client = return (False, [])
+    | otherwise = return (True, [])
+noExt _ = return (True, [])

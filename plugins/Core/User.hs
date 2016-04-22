@@ -13,7 +13,7 @@
  - limitations under the License.
  -}
 
-module User (plugin) where
+module Core.User (plugin) where
 
 import IRCD.Types
 import IRCD.Helper

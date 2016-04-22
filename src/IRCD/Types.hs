@@ -65,8 +65,8 @@ data Channel = Channel
     , clients :: [Client]
     } deriving (Show, Eq)
 
-data Source = ClientSrc Client
-data Destination = ChannelDst Channel
+data Source = ClientSrc Client deriving Show
+data Destination = ChannelDst Channel deriving Show
 
 data Env = Env
     { envClients        :: Clients
@@ -86,8 +86,11 @@ type HandlerSpec = Source -> Message -> State Env [Action]
 data Handler = GenericHandler HandlerSpec
              | CommandHandler String HandlerSpec
 
-type TransformerSpec = Action -> State Env [Action]
+type TransformerSpec = Action -> State Env (Bool, [Action])
 data Transformer = Transformer TransformerSpec Int
+
+instance Show Transformer where
+    show (Transformer _ order) = "Transformer <fn>" ++ show order
 
 instance Eq Transformer where
     Transformer _ x == Transformer _ y = x == y
@@ -101,6 +104,15 @@ data Action = GenericAction ActionSpec
             | NickChangeAction Source (Maybe String) String ActionSpec
             | UserChangeAction Source (Maybe String) String ActionSpec
             | RealNameChangeAction Source (Maybe String) String ActionSpec
+            | RegisterAction Source ActionSpec
+
+instance Show Action where
+    show (GenericAction _) = "GenericAction <fn>"
+    show (PrivmsgAction src dst msg _) = "PrivmsgAction " ++ show src ++ ' ' : show dst ++ ' ' : show msg ++ " <fn>"
+    show (NickChangeAction src old new _) = "NickChangeAction " ++ show src ++ ' ' : show old ++ ' ' : new ++ " <fn>"
+    show (UserChangeAction src old new _) = "UserChangeAction " ++ show src ++ ' ' : show old ++ ' ' : new ++ " <fn>"
+    show (RealNameChangeAction src old new _) = "RealNameChangeAction " ++ show src ++ ' ' : show old ++ ' ' : new ++ " <fn>"
+    show (RegisterAction src _) = "RegisterAction " ++ show src ++ " <fn>"
 
 actionSpec :: Action -> ActionSpec
 actionSpec (GenericAction spec) = spec
@@ -108,6 +120,7 @@ actionSpec (PrivmsgAction _ _ _ spec) = spec
 actionSpec (NickChangeAction _ _ _ spec) = spec
 actionSpec (UserChangeAction _ _ _ spec) = spec
 actionSpec (RealNameChangeAction _ _ _ spec) = spec
+actionSpec (RegisterAction _ spec) = spec
 
 defaultClient :: Int -> Client
 defaultClient uid' = Client

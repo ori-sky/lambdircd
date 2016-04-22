@@ -13,6 +13,8 @@
  - limitations under the License.
  -}
 
+{-# LANGUAGE LambdaCase #-}
+
 module IRCD.Helper where
 
 import qualified Data.IntMap as IM
@@ -22,12 +24,21 @@ import IRCD.Types
 import IRCD.Env
 import IRCD.Clients
 
+checkClient :: Int -> State Env (Maybe Client)
+checkClient uid' = do
+    uids <- gets (byUid . envClients)
+    return (IM.lookup uid' uids)
+
+checkClientRegistered :: Int -> State Env (Maybe Bool)
+checkClientRegistered uid' = checkClient uid' >>= return . \case
+    Nothing -> Nothing
+    Just client' -> Just (registered client')
+
 updateClient :: (Client -> Client) -> Int -> State Env ()
 updateClient f uid' = do
-    uids <- gets (byUid . envClients)
-    modify $ mapEnvClients $ case uid' `IM.lookup` uids of
+    checkClient uid' >>= modify . mapEnvClients . \case
         Nothing -> insertClient (f (defaultClient uid'))
-        Just client'  -> replaceClient client' (f client')
+        Just client' -> replaceClient client' (f client')
 
 updateClientNick :: String -> Int -> State Env ()
 updateClientNick nick' = updateClient (\c -> c {nick=Just nick'})
